@@ -14,16 +14,18 @@ class SqliteDriverImpl extends DatabaseDriver {
   Future<void> connect() async {
     if (uri == 'sqlite::memory:') {
       _connection = sqlite3.openInMemory();
-    } else {
-      final uriParsed = Uri.parse(uri);
-      final dbDirectory = Directory('database');
-      final dbPath = 'database/${uriParsed.host}';
-
-      if (!dbDirectory.existsSync()) {
-        dbDirectory.createSync(recursive: true);
+    } else if (uri.startsWith("sqlite:")) {
+      // Remove o prefixo "sqlite:" para obter o caminho do arquivo
+      final filePath = uri.replaceFirst("sqlite:", "");
+      // Se o caminho for relativo, cria o diretório pai, se necessário.
+      final file = File(filePath);
+      final directory = file.parent;
+      if (!directory.existsSync()) {
+        directory.createSync(recursive: true);
       }
-
-      _connection = sqlite3.open(dbPath);
+      _connection = sqlite3.open(filePath);
+    } else {
+      throw Exception("Unsupported URI scheme");
     }
   }
 

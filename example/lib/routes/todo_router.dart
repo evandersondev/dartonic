@@ -3,25 +3,23 @@ import 'dart:convert';
 import 'package:darto/darto.dart';
 import 'package:example/config/database.dart';
 
-Router appRouter() {
+Router todoRouter() {
   final router = Router();
   final db = dartonic.I;
 
-  router.post('/users', (Request req, Response res) async {
+  router.post('/todos', (Request req, Response res) async {
     final body = jsonDecode(await req.body);
 
-    final userCreated = await db.insert('users').values(body).returning();
-    print(userCreated);
+    final todoCreated = await db.insert('todos').values(body).returning();
+    print(todoCreated);
 
-    res.status(CREATED).json(userCreated);
+    res.status(CREATED).json(todoCreated);
   });
 
-  router.get('/users', (Request req, Response res) async {
-    final users = await db
-        .select({'name': 'users.fullname', 'age': 'users.birthday'})
-        .from('users');
+  router.get('/todos', (Request req, Response res) async {
+    final todos = await db.select().from('todos');
 
-    res.json(users);
+    res.json(todos);
   });
 
   // router.put('/tasks/:id', (Request req, Response res) async {

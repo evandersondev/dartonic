@@ -17,7 +17,7 @@ class SqlDriverFactory {
       await driver.connect();
       return driver;
     } else if (uri.startsWith('mysql')) {
-      final driver = MysqlDriverImpl();
+      final driver = MysqlDriverImpl(uri);
       await driver.connect();
       return driver;
     } else if (uri.startsWith('postgres')) {

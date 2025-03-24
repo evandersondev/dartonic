@@ -1,10 +1,16 @@
+import 'dart:core';
+
 class ColumnType {
   final String? columnName;
   final String baseType;
+  // The mode property allows conversion for types:
+  // For INTEGER: 'number' (default), 'boolean', 'timestamp'.
+  // For TEXT: 'string' (default), 'json'.
+  final String? mode;
   final List<String> modifiers = [];
 
-  // Aceita um parâmetro opcional columnName.
-  ColumnType(this.baseType, [this.columnName]);
+  // Constructor accepts an optional mode.
+  ColumnType(this.baseType, [this.columnName, this.mode]);
 
   ColumnType notNull() {
     modifiers.add("NOT NULL");
@@ -16,7 +22,7 @@ class ColumnType {
     return this;
   }
 
-  ColumnType primaryKey({bool autoIncrement = true}) {
+  ColumnType primaryKey({bool autoIncrement = false}) {
     if (autoIncrement) {
       modifiers.add("PRIMARY KEY AUTOINCREMENT");
     } else {
@@ -25,10 +31,9 @@ class ColumnType {
     return this;
   }
 
-  // Atualizado para transformar "users.id" em "users(id)" para SQLite.
+  // Transforms "table.column" into "table(column)" for SQLite.
   ColumnType references(String Function() ref) {
     String rawRef = ref();
-    // Se a referência estiver no formato "table.column", converte para "table(column)"
     if (rawRef.contains('.')) {
       final parts = rawRef.split('.');
       if (parts.length == 2) {
@@ -39,13 +44,13 @@ class ColumnType {
     return this;
   }
 
-  /// Define um valor default para a coluna utilizando um valor ou expressão SQL.
-  ColumnType defaultVal(String value) {
+  /// Define a default value using a raw SQL expression.
+  ColumnType defaultVal(dynamic value) {
     modifiers.add("DEFAULT $value");
     return this;
   }
 
-  /// Define o valor default como a data/hora atual.
+  /// Define the default as the current timestamp.
   ColumnType defaultNow() {
     modifiers.add("DEFAULT CURRENT_TIMESTAMP");
     return this;
@@ -53,23 +58,113 @@ class ColumnType {
 
   @override
   String toString() {
-    // Retorna a definição completa da coluna, sem o nome, pois o nome é definido pela chave do mapa
     return "$baseType ${modifiers.join(' ')}".trim();
   }
 }
 
-/// Funções para tipos de colunas com sintaxe inspirada no Drizzle.
-/// Agora as funções utilizam parâmetros nomeados para permitir fornecer o nome da coluna.
+// Exported column helper functions adapted from Drizzle syntax.
 ColumnType serial({String? columnName}) => ColumnType("SERIAL", columnName);
-ColumnType varchar({String? columnName, int length = 255}) =>
+
+ColumnType varchar(
+        {String? columnName, List<String>? enumerate, int length = 255}) =>
     ColumnType("VARCHAR($length)", columnName);
-ColumnType integer({String? columnName}) => ColumnType("INTEGER", columnName);
-ColumnType text({String? columnName}) => ColumnType("TEXT", columnName);
+
+// For INTEGER, mode defaults to 'number', but supports 'boolean' and 'timestamp'.
+ColumnType integer({String? columnName, String mode = 'number'}) =>
+    ColumnType("INTEGER", columnName, mode);
+
+// For TEXT, mode defaults to 'string', but 'json' is also supported.
+ColumnType text(
+        {String? columnName,
+        String mode = 'string',
+        List<String>? enumerate}) =>
+    ColumnType("TEXT", columnName, mode);
+
 ColumnType uuid({String? columnName}) => ColumnType("UUID", columnName);
 
-/// Cria uma coluna do tipo timestamp, permitindo salvar a data de acordo com o modo.
-/// Por padrão, o mode é 'date', que utiliza o formato DATETIME.
-/// Se o mode for 'string', utiliza TEXT. Se for 'number', utiliza NUMERIC.
+ColumnType real({String? columnName, int? precision, int? scale}) {
+  String typeStr = "REAL";
+  if (precision != null) {
+    typeStr += "($precision${scale != null ? ",$scale" : ""})";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType blob({String? columnName}) => ColumnType("BLOB", columnName);
+
+ColumnType tinyint({String? columnName}) => ColumnType("TINYINT", columnName);
+
+ColumnType smallint({String? columnName}) => ColumnType("SMALLINT", columnName);
+
+ColumnType bigint({String? columnName, bool? unsigned = false}) =>
+    ColumnType("BIGINT", columnName);
+
+ColumnType mediumint({String? columnName}) =>
+    ColumnType("MEDIUMINT", columnName);
+
+ColumnType decimal({String? columnName, int? precision, int? scale}) {
+  String typeStr = "DECIMAL";
+  if (precision != null) {
+    typeStr += "($precision${scale != null ? ",$scale" : ""})";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType $double({String? columnName, int? precision, int? scale}) {
+  String typeStr = "DOUBLE";
+  if (precision != null) {
+    typeStr += "($precision${scale != null ? ",$scale" : ""})";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType $float({String? columnName}) => ColumnType("DOUBLE", columnName);
+
+ColumnType binary({String? columnName}) => ColumnType("BINARY", columnName);
+
+ColumnType varbinary({String? columnName, int? length}) {
+  String typeStr = "VARBINARY";
+  if (length != null) {
+    typeStr += "($length)";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType char({String? columnName}) => ColumnType("CHAR", columnName);
+
+ColumnType boolean({String? columnName}) => ColumnType("BOOLEAN", columnName);
+
+ColumnType date({String? columnName}) => ColumnType("DATE", columnName);
+
+ColumnType datetime({String? columnName, int? fsp}) {
+  String typeStr = "DATETIME";
+  if (fsp != null) {
+    typeStr += "($fsp)";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType time({String? columnName, int? fsp}) {
+  String typeStr = "DATETIME";
+  if (fsp != null) {
+    typeStr += "($fsp)";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType year({String? columnName, int? fsp}) {
+  String typeStr = "YEAR";
+  if (fsp != null) {
+    typeStr += "($fsp)";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType mysqlEnum(List<String> enumerate, {String? columnName, int? fsp}) =>
+    ColumnType("ENUM", columnName);
+
+/// Creates a timestamp column. The default mode is 'date', which uses DATETIME.
+/// Use 'string' to store as TEXT and 'number' to store as NUMERIC.
 ColumnType timestamp({String? columnName, String mode = 'date'}) {
   String base;
   switch (mode) {
@@ -87,6 +182,5 @@ ColumnType timestamp({String? columnName, String mode = 'date'}) {
   return ColumnType(base, columnName);
 }
 
-/// Função helper para injetar expressões SQL brutas.
-/// Pode ser utilizada, por exemplo, para definir um valor default via SQL.
+/// Helper to inject raw SQL expressions.
 String sql(String value) => value;

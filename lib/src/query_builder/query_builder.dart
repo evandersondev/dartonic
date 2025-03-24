@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import '../drivers/driver.dart';
+import '../types/table.dart';
+import '../utils/convertion_helper.dart';
 import 'condition.dart';
 
 class QueryBuilder implements Future<dynamic> {
@@ -19,14 +21,12 @@ class QueryBuilder implements Future<dynamic> {
   final List<dynamic> _parameters = [];
   String? _createTableSQL;
   final List<String> _alterTableCommands = [];
+  final Map<String, TableSchema> _schemas;
 
-  // novo campo para armazenar a cláusula RETURNING
   String? _returningClause;
 
-  QueryBuilder(this._driver);
+  QueryBuilder(this._driver, this._schemas);
 
-  /// Método select atualizado para aceitar um Map ou List de colunas.
-  /// Se passado um Map, a chave representa o alias e o valor a coluna a ser selecionada.
   QueryBuilder select([Map<String, String>? columns]) {
     _queryType = 'SELECT';
     if (columns == null) {
@@ -42,7 +42,6 @@ class QueryBuilder implements Future<dynamic> {
     return this;
   }
 
-  // Aceita Condition ou (coluna, operador, valor) para WHERE
   QueryBuilder where(dynamic columnOrCondition,
       [String? operator, dynamic value]) {
     if (columnOrCondition is Condition) {
@@ -70,7 +69,6 @@ class QueryBuilder implements Future<dynamic> {
     return this;
   }
 
-  // JOINs
   QueryBuilder innerJoin(String table, Condition condition) {
     _joinClauses.add("INNER JOIN $table ON ${condition.clause}");
     _parameters.addAll(condition.values);
@@ -110,7 +108,6 @@ class QueryBuilder implements Future<dynamic> {
     return this;
   }
 
-  // Métodos para INSERT
   QueryBuilder insert(String table) {
     _table = table;
     _queryType = 'INSERT';
@@ -118,7 +115,18 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   QueryBuilder values(Map<String, dynamic> data) {
-    _insertData = Map<String, dynamic>.from(data);
+    _parameters.clear();
+
+    final tableSchema = _schemas[_table];
+    _insertData = {};
+    data.forEach((key, value) {
+      if (tableSchema != null && tableSchema.columns.containsKey(key)) {
+        final colType = tableSchema.columns[key]!;
+        _insertData[key] = convertValueForInsert(value, colType);
+      } else {
+        _insertData[key] = value;
+      }
+    });
     _parameters.addAll(_insertData.values);
     return this;
   }
@@ -242,21 +250,31 @@ class QueryBuilder implements Future<dynamic> {
     return "$sql;";
   }
 
-  ///
-  /// Executa a query utilizando o driver.
-  /// Se houver uma cláusula RETURNING ou se for SELECT, usa execute() para retornar resultados.
   Future<dynamic> _internalExecute() async {
     final sql = toSql();
     final params = getParameters();
+    dynamic result;
     if (_queryType == 'SELECT' || _returningClause != null) {
-      return await _driver.execute(sql, params);
+      result = await _driver.execute(sql, params);
+      if (result is List) {
+        result = result.map((row) {
+          if (row is Map<String, dynamic>) {
+            row.forEach((key, value) {
+              final colType = _schemas[_table]?.columns[key];
+              if (colType != null) {
+                row[key] = convertValueForSelect(value, colType);
+              }
+            });
+          }
+          return row;
+        }).toList();
+      }
     } else {
       await _driver.raw(sql, params);
-      return null;
+      result = null;
     }
+    return result;
   }
-
-  // Métodos da interface Future
 
   @override
   Future<S> then<S>(FutureOr<S> Function(dynamic value) onValue,

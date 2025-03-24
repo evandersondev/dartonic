@@ -49,16 +49,22 @@ const List<String> supportedMySQLTypes = [
 /// Functions to create tables for different databases.
 /// They now return a Table instance, which is also a TableSchema.
 Table mysqlTable(String name, Map<String, ColumnType> columns) {
+  // final cols = columns.map((key, value) {
+  //   final colName = value.columnName ?? key;
+  //   // Extract the base type name (e.g., from "VARCHAR(255)" extract "VARCHAR")
+  //   final typeMatch = RegExp(r'^([A-Z]+)').firstMatch(value.baseType);
+  //   final baseTypeName =
+  //       typeMatch != null ? typeMatch.group(1)! : value.baseType;
+  //   if (!supportedMySQLTypes.contains(baseTypeName)) {
+  //     throw Exception(
+  //         "The column type '$baseTypeName' is not supported by MySQL.");
+  //   }
+  //   return MapEntry(colName, value);
+  // });
+  // return Table(name, Map.from(cols));
+
   final cols = columns.map((key, value) {
     final colName = value.columnName ?? key;
-    // Extract the base type name (e.g., from "VARCHAR(255)" extract "VARCHAR")
-    final typeMatch = RegExp(r'^([A-Z]+)').firstMatch(value.baseType);
-    final baseTypeName =
-        typeMatch != null ? typeMatch.group(1)! : value.baseType;
-    if (!supportedMySQLTypes.contains(baseTypeName)) {
-      throw Exception(
-          "The column type '$baseTypeName' is not supported by MySQL.");
-    }
     return MapEntry(colName, value);
   });
   return Table(name, Map.from(cols));

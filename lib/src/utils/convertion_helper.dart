@@ -50,8 +50,6 @@ dynamic convertValueForSelect(dynamic value, ColumnType colType) {
     }
   }
 
-  print("Valor convertido: $value : ${value.runtimeType}");
-
   if (colType.baseType == "REAL") {
     return value;
   }

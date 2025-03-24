@@ -226,7 +226,7 @@ class QueryBuilder implements Future<dynamic> {
     if (_returningClause != null) {
       sql += " $_returningClause";
     }
-    return "$sql;";
+    return sql;
   }
 
   String _buildUpdate() {
@@ -273,7 +273,27 @@ class QueryBuilder implements Future<dynamic> {
       await _driver.raw(sql, params);
       result = null;
     }
+    _reset();
+
     return result;
+  }
+
+  void _reset() {
+    _table = '';
+    _columns = ['*'];
+    _whereClauses.clear();
+    _orderByClauses.clear();
+    _joinClauses.clear();
+    _unionQueries.clear();
+    _limit = null;
+    _offset = null;
+    _insertData.clear();
+    _updateData.clear();
+    _queryType = null;
+    _parameters.clear();
+    _createTableSQL = null;
+    _alterTableCommands.clear();
+    _returningClause = null;
   }
 
   @override

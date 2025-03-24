@@ -63,7 +63,8 @@ class ColumnType {
 }
 
 // Exported column helper functions adapted from Drizzle syntax.
-ColumnType serial({String? columnName}) => ColumnType("SERIAL", columnName);
+ColumnType serial({String? columnName}) =>
+    ColumnType("SERIAL AUTO_INCREMENT", columnName);
 
 ColumnType varchar(
         {String? columnName, List<String>? enumerate, int length = 255}) =>

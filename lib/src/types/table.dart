@@ -1,42 +1,171 @@
-import 'package:dartonic/src/types/column.dart';
+import 'column.dart';
 
-class Table {
+/// Tipos de ações para foreign keys
+enum ReferentialAction {
+  cascade,
+  restrict,
+  noAction,
+  setNull,
+  setDefault,
+}
+
+/// Definição de uma foreign key
+class ForeignKey {
+  final String column;
+  final String references;
+  final String referencesColumn;
+  final ReferentialAction? onDelete;
+  final ReferentialAction? onUpdate;
+
+  ForeignKey({
+    required this.column,
+    required this.references,
+    required this.referencesColumn,
+    this.onDelete,
+    this.onUpdate,
+  });
+
+  String toSql() {
+    final constraints = [
+      'FOREIGN KEY ($column)',
+      'REFERENCES $references($referencesColumn)',
+    ];
+
+    if (onDelete != null) {
+      constraints.add('ON DELETE ${_actionToSql(onDelete!)}');
+    }
+
+    if (onUpdate != null) {
+      constraints.add('ON UPDATE ${_actionToSql(onUpdate!)}');
+    }
+
+    return constraints.join(' ');
+  }
+
+  String _actionToSql(ReferentialAction action) {
+    switch (action) {
+      case ReferentialAction.cascade:
+        return 'CASCADE';
+      case ReferentialAction.restrict:
+        return 'RESTRICT';
+      case ReferentialAction.noAction:
+        return 'NO ACTION';
+      case ReferentialAction.setNull:
+        return 'SET NULL';
+      case ReferentialAction.setDefault:
+        return 'SET DEFAULT';
+    }
+  }
+}
+
+/// Representa o schema de uma tabela
+class TableSchema {
   final String name;
-  final Map<String, String> columns;
-  Table(this.name, this.columns);
+  final Map<String, ColumnType> columns;
+  final List<ForeignKey> foreignKeys;
+
+  TableSchema(
+    this.name,
+    this.columns, {
+    this.foreignKeys = const [],
+  });
 }
 
-// Funções para criar tabelas para diferentes bancos de dados.
-// Se o ColumnType possuir um columnName, esse nome será utilizado,
-// caso contrário, a chave do mapa será utilizada.
-Table mysqlTable(String name, Map<String, ColumnType> columns) {
-  final cols = columns.entries.map((e) {
-    final colName = e.value.columnName ?? e.key;
-    return MapEntry(colName, e.value.toString());
+/// A classe Table estende TableSchema para poder ser usada no lugar de um TableSchema
+class Table extends TableSchema {
+  Table(
+    super.name,
+    super.columns, {
+    super.foreignKeys = const [],
   });
-  return Table(name, Map.fromEntries(cols));
 }
 
-Table sqliteTable(String name, Map<String, ColumnType> columns) {
-  final cols = columns.entries.map((e) {
-    final colName = e.value.columnName ?? e.key;
-    return MapEntry(colName, e.value.toString());
+/// Tipos suportados para SQLite
+const List<String> supportedSqliteTypes = [
+  "INTEGER",
+  "TEXT",
+  "REAL",
+  "BLOB",
+  "DATETIME"
+];
+
+/// Tipos suportados para MySQL
+const List<String> supportedMySQLTypes = [
+  "SERIAL",
+  "VARCHAR",
+  "INTEGER",
+  "TEXT",
+  "UUID",
+  "REAL",
+  "BLOB",
+  "TINYINT",
+  "SMALLINT",
+  "BIGINT",
+  "MEDIUMINT",
+  "DECIMAL",
+  "DOUBLE",
+  "FLOAT",
+  "BINARY",
+  "VARBINARY",
+  "CHAR",
+  "BOOLEAN",
+  "DATE",
+  "DATETIME",
+  "YEAR",
+  "ENUM"
+];
+
+/// Funções para criar tabelas para diferentes bancos de dados
+Table mysqlTable(
+  String name,
+  Map<String, ColumnType> columns, {
+  List<ForeignKey> foreignKeys = const [],
+}) {
+  final cols = columns.map((key, value) {
+    final colName = value.columnName ?? key;
+    final typeMatch = RegExp(r'^([A-Z]+)').firstMatch(value.baseType);
+    final baseTypeName =
+        typeMatch != null ? typeMatch.group(1)! : value.baseType;
+
+    if (!supportedMySQLTypes.contains(baseTypeName)) {
+      throw Exception(
+        "O tipo de coluna '$baseTypeName' não é suportado pelo MySQL.",
+      );
+    }
+    return MapEntry(colName, value);
   });
-  return Table(name, Map.fromEntries(cols));
+
+  return Table(name, Map.from(cols), foreignKeys: foreignKeys);
 }
 
-Table pgTable(String name, Map<String, ColumnType> columns) {
-  final cols = columns.entries.map((e) {
-    final colName = e.value.columnName ?? e.key;
-    return MapEntry(colName, e.value.toString());
+Table sqliteTable(
+  String name,
+  Map<String, ColumnType> columns, {
+  List<ForeignKey> foreignKeys = const [],
+}) {
+  final cols = columns.map((key, value) {
+    final colName = value.columnName ?? key;
+
+    if (!supportedSqliteTypes.contains(value.baseType)) {
+      throw Exception(
+        "O tipo de coluna '${value.baseType}' não é suportado pelo SQLite.",
+      );
+    }
+
+    return MapEntry(colName, value);
   });
-  return Table(name, Map.fromEntries(cols));
+
+  return Table(name, Map.from(cols), foreignKeys: foreignKeys);
 }
 
-Table createTable(String name, Map<String, ColumnType> columns) {
-  final cols = columns.entries.map((e) {
-    final colName = e.value.columnName ?? e.key;
-    return MapEntry(colName, e.value.toString());
+Table pgTable(
+  String name,
+  Map<String, ColumnType> columns, {
+  List<ForeignKey> foreignKeys = const [],
+}) {
+  final cols = columns.map((key, value) {
+    final colName = value.columnName ?? key;
+    return MapEntry(colName, value);
   });
-  return Table(name, Map.fromEntries(cols));
+  return Table(name, Map.from(cols), foreignKeys: foreignKeys);
 }

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="./assets/logo.png" width="200px" align="center" alt="Zod logo" />
+  <img src="./assets/logo.png" width="200px" align="center" alt="Dartonic logo" />
   <h1 align="center">Dartonic</h1>
   <p align="center">
-  <!-- <a href="https://github.com/evandersondev/dartonic">🍷 dartonic.dev</a> -->
+  <a href="https://github.com/evandersondev/dartonic">🍷 Dartonic Github</a>
   <br/>
     A database query builder inspired by <a href="https://drizzledb.com">Drizzle</a>. It allows you to connect to various databases (SQLite, PostgreSQL, MySQL) and perform database operations using a fluent API.
   </p>
@@ -16,7 +16,7 @@
 
 ### Support 💖
 
-If you find Darto useful, please consider supporting its development 🌟[Buy Me a Coffee](https://buymeacoffee.com/evandersondev).🌟 Your support helps us improve the framework and make it even better!
+If you find Dartonic useful, please consider supporting its development 🌟[Buy Me a Coffee](https://buymeacoffee.com/evandersondev).🌟 Your support helps us improve the framework and make it even better!
 
 <br/>
 
@@ -64,7 +64,7 @@ Add Dartonic to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dartonic: ^0.0.1
+  dartonic: ^0.0.2
 ```
 
 <br/>
@@ -96,7 +96,7 @@ Dartonic supports multiple databases through connection URIs:
 - **SQLite (in memory):**
 
   ```dart
-  final dartonic = Dartonic("sqlite::memory:", [usersTable, ordersTable]);
+  final dartonic = Dartonic("sqlite::memory:");
   ```
 
 <br/>

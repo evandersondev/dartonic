@@ -1,3 +1,4 @@
+import '../types/table.dart';
 import 'mysql_driver_impl.dart';
 import 'postgres_driver_impl.dart';
 import 'sqlite_driver_impl.dart';
@@ -11,13 +12,14 @@ abstract class DatabaseDriver {
 }
 
 class SqlDriverFactory {
-  static Future<DatabaseDriver> getDriver(String uri) async {
+  static Future<DatabaseDriver> getDriver(
+      String uri, final Map<String, TableSchema> schemas) async {
     if (uri.startsWith('sqlite')) {
-      final driver = SqliteDriverImpl(uri);
+      final driver = SqliteDriverImpl(uri, schemas);
       await driver.connect();
       return driver;
     } else if (uri.startsWith('mysql')) {
-      final driver = MysqlDriverImpl(uri);
+      final driver = MysqlDriverImpl(uri, schemas);
       await driver.connect();
       return driver;
     } else if (uri.startsWith('postgres')) {

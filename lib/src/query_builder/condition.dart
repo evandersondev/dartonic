@@ -57,6 +57,14 @@ Condition inArray(String column, List<dynamic> values) {
   return Condition("$column IN ($placeholders)", values);
 }
 
+String count(String columnName, {bool distinct = false}) {
+  if (!distinct) {
+    return "COUNT($columnName)";
+  } else {
+    return "COUNT(DISTINCT $columnName)";
+  }
+}
+
 Condition notInArray(String column, List<dynamic> values) {
   final placeholders = List.filled(values.length, '?').join(', ');
   return Condition("$column NOT IN ($placeholders)", values);

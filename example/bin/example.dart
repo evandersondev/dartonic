@@ -2,65 +2,111 @@ import 'package:darto/darto.dart';
 import 'package:dartonic/dartonic.dart';
 
 void main() async {
-  // await dartonic.sync();
   final app = Darto();
 
-  // app.use('/api/v1', appRouter());
-  // app.use('/api/v1', todoRouter());
-
-  //
-
-  final usersTable = mysqlTable('users', {
+  final usersTable = sqliteTable('users', {
     'id': integer().primaryKey(autoIncrement: true),
-    'username': varchar().notNull(),
-    'email': varchar().unique(),
+    'name': text().notNull(),
+    'created_at': datetime().defaultNow(),
   });
 
-  final taskTable = mysqlTable('tasks', {
+  final rolesTable = sqliteTable('roles', {
     'id': integer().primaryKey(autoIncrement: true),
-    'title': varchar().notNull(),
-    'is_completed': boolean().notNull().defaultVal(false),
-    'user_id': integer().references(() => 'users.id'),
+    'name': text().notNull(),
+    'created_at': datetime().defaultNow(),
   });
 
-  final usersRelations = relations(
-    usersTable,
-    (builder) => {
-      'tasks': builder.many(
-        'tasks',
-        fields: ['users.id'],
-        references: ['tasks.user_id'],
-      ),
+  final userRolesTable = sqliteTable(
+    'user_roles',
+    {
+      'user_id': integer().notNull(),
+      'role_id': integer().notNull(),
+      'created_at': datetime().defaultNow(),
     },
+    foreignKeys: [
+      ForeignKey(
+        column: 'user_id',
+        references: 'users',
+        referencesColumn: 'id',
+        onDelete: ReferentialAction.cascade,
+      ),
+      ForeignKey(
+        column: 'role_id',
+        references: 'roles',
+        referencesColumn: 'id',
+        onDelete: ReferentialAction.cascade,
+      ),
+    ],
   );
 
-  final dartonic = Dartonic("mysql://user:userpassword@localhost:3307/mydb", [
+  final dartonic = Dartonic("sqlite:database/dartonic.db", [
     usersTable,
-    taskTable,
-    usersRelations,
+    rolesTable,
+    userRolesTable,
   ]);
-  final db = await dartonic.sync();
+  await dartonic.sync();
 
-  // await db.insert('users').values({
-  //   'username': 'John Doe',
-  //   'email': 'john@example.com',
+  // Inserir mais dados de teste
+  // await db.insert('users').values({'name': 'Jane Doe'});
+  // await db.insert('users').values({'name': 'John Doe'});
+
+  // await db.insert('roles').values({'name': 'user'});
+  // await db.insert('roles').values({'name': 'admin'});
+
+  // Criar mais relacionamentos
+  // await db.insert('user_roles').values({
+  //   'user_id': 2, // John Doe
+  //   'role_id': 2, // role user
   // });
 
-  // await db.insert('tasks').values({
-  //   'title': 'Buy groceries',
-  //   'is_completed': true,
-  //   'user_id': 1,
+  // await db.insert('user_roles').values({
+  //   'user_id': 2, // Jane Doe
+  //   'role_id': 1, // role admin
   // });
 
-  final users = await db
-      .select({
-        'name': 'users.username',
-        'task_title': 'tasks.title',
-        'is_completed': 'tasks.is_completed',
-      })
-      .from('users')
-      .innerJoin('tasks', eq('users.id', 'tasks.user_id'));
-  print(users);
+  // Primeiro vamos garantir que o count está funcionando corretamente
+  // Primeiro, confirmamos que temos 2 roles no sistema
+  // final totalRoles = await db
+  //     .select()
+  //     .from('users')
+  //     .where(like('users.name', '%John%'));
+  // print('Total de Roles: $totalRoles');
+
+  // Query para buscar usuários e suas roles
+  // final usersWithRoles = await db
+  //     .select({
+  //       'name': 'users.name',
+  //       'total_roles': count(
+  //         'user_roles.role_id',
+  //         distinct: true,
+  //       ), // sql('COUNT(DISTINCT user_roles.role_id)'),
+  //     })
+  //     .from('users')
+  //     .innerJoin('user_roles', eq('users.id', 'user_roles.user_id'))
+  //     .groupBy(['users.id', 'users.name']);
+  // print('Usuários e suas roles: $usersWithRoles');
+
+  // // Query para buscar apenas usuários que têm TODAS as roles
+  // final usersWithAllRoles = await db
+  //     .select({
+  //       'name': 'users.name',
+  //       'total_roles': 'COUNT(DISTINCT user_roles.role_id)',
+  //     })
+  //     .from('users')
+  //     .innerJoin('user_roles', eq('users.id', 'user_roles.user_id'))
+  //     .groupBy(['users.id', 'users.name'])
+  //     .having(eq('COUNT(DISTINCT user_roles.role_id)', totalRoles[0]['total']));
+  // print('Usuários com todas as roles: $usersWithAllRoles');
+
+  // final userUpdate =
+  //     await db
+  //         .update('users')
+  //         .set({'name': 'John Doe Updated'})
+  //         .where(eq('id', 1))
+  //         .returning();
+  // print(userUpdate);
+
+  // await db.delete('users').where(eq('users.id', 1));
 
   app.listen(3000, () => print('Server is running on port 3000'));
 }

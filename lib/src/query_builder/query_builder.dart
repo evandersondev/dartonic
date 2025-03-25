@@ -22,6 +22,8 @@ class QueryBuilder implements Future<dynamic> {
   String? _createTableSQL;
   final List<String> _alterTableCommands = [];
   final Map<String, TableSchema> _schemas;
+  final List<String> _groupByClauses = [];
+  final List<String> _havingClauses = [];
 
   String? _returningClause;
 
@@ -39,6 +41,23 @@ class QueryBuilder implements Future<dynamic> {
 
   QueryBuilder from(String table) {
     _table = table;
+    return this;
+  }
+
+  QueryBuilder groupBy(List<String> columns) {
+    _groupByClauses.addAll(columns);
+    return this;
+  }
+
+  QueryBuilder having(dynamic columnOrCondition,
+      [String? operator, dynamic value]) {
+    if (columnOrCondition is Condition) {
+      _havingClauses.add(columnOrCondition.clause);
+      _parameters.addAll(columnOrCondition.values);
+    } else {
+      _havingClauses.add("$columnOrCondition $operator ?");
+      _parameters.add(value);
+    }
     return this;
   }
 
@@ -103,8 +122,16 @@ class QueryBuilder implements Future<dynamic> {
     return this;
   }
 
-  QueryBuilder count() {
-    _columns = ["COUNT(*) AS total"];
+  // Ajuste no método count:
+  // Se houver condição, ela será adicionada à cláusula WHERE.
+  // Além disso, não utilizamos alias para a função count, para que o retorno seja apenas o valor.
+  QueryBuilder count([Condition? condition]) {
+    _columns = ["COUNT(*)"];
+
+    if (condition != null) {
+      _whereClauses.add(condition.clause);
+      _parameters.addAll(condition.values);
+    }
     return this;
   }
 
@@ -207,15 +234,39 @@ class QueryBuilder implements Future<dynamic> {
 
   String _buildSelect() {
     String sql = "SELECT ${_columns.join(', ')} FROM $_table";
-    if (_joinClauses.isNotEmpty) sql += " ${_joinClauses.join(" ")}";
-    if (_whereClauses.isNotEmpty)
+
+    if (_joinClauses.isNotEmpty) {
+      sql += " ${_joinClauses.join(" ")}";
+    }
+
+    if (_whereClauses.isNotEmpty) {
       sql += " WHERE ${_whereClauses.join(" AND ")}";
-    if (_orderByClauses.isNotEmpty)
+    }
+
+    if (_groupByClauses.isNotEmpty) {
+      sql += " GROUP BY ${_groupByClauses.join(", ")}";
+    }
+
+    if (_havingClauses.isNotEmpty) {
+      sql += " HAVING ${_havingClauses.join(" AND ")}";
+    }
+
+    if (_orderByClauses.isNotEmpty) {
       sql += " ORDER BY ${_orderByClauses.join(", ")}";
-    if (_limit != null) sql += " LIMIT $_limit";
-    if (_offset != null) sql += " OFFSET $_offset";
-    if (_unionQueries.isNotEmpty)
+    }
+
+    if (_limit != null) {
+      sql += " LIMIT $_limit";
+    }
+
+    if (_offset != null) {
+      sql += " OFFSET $_offset";
+    }
+
+    if (_unionQueries.isNotEmpty) {
       sql += " UNION ${_unionQueries.join(" UNION ")}";
+    }
+
     return "$sql;";
   }
 
@@ -256,7 +307,18 @@ class QueryBuilder implements Future<dynamic> {
     dynamic result;
     if (_queryType == 'SELECT' || _returningClause != null) {
       result = await _driver.execute(sql, params);
-      if (result is List) {
+      // Se for uma contagem, retorne apenas o valor numérico
+      if (_queryType == 'SELECT' &&
+          _columns.length == 1 &&
+          _columns[0].toLowerCase().startsWith("count(") &&
+          result is List &&
+          result.isNotEmpty &&
+          result[0] is Map) {
+        final row = result[0] as Map;
+        if (row.length == 1) {
+          result = row.values.first;
+        }
+      } else if (result is List) {
         result = result.map((row) {
           if (row is Map<String, dynamic>) {
             row.forEach((key, value) {
@@ -294,6 +356,8 @@ class QueryBuilder implements Future<dynamic> {
     _createTableSQL = null;
     _alterTableCommands.clear();
     _returningClause = null;
+    _groupByClauses.clear();
+    _havingClauses.clear();
   }
 
   @override

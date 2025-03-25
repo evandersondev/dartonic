@@ -20,7 +20,7 @@ class Dartonic {
   DatabaseFacade get I => DatabaseFacade(_driver, _schemas);
 
   Future<DatabaseFacade> sync() async {
-    _driver = await SqlDriverFactory.getDriver(uri);
+    _driver = await SqlDriverFactory.getDriver(uri, _schemas);
     for (final schema in _schemas.values) {
       await _driver.createTable(
           schema.name,

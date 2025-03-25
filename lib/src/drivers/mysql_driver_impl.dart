@@ -1,12 +1,15 @@
 import 'package:mysql1/mysql1.dart' as mysql;
 
+import '../types/table.dart';
 import 'driver.dart';
 
 class MysqlDriverImpl extends DatabaseDriver {
   final String uri;
+  final Map<String, TableSchema> _schemas;
   late mysql.MySqlConnection _connection;
 
-  MysqlDriverImpl(this.uri);
+  MysqlDriverImpl(this.uri, Map<String, TableSchema> schemas)
+      : _schemas = schemas;
 
   @override
   Future<void> connect() async {
@@ -47,11 +50,25 @@ class MysqlDriverImpl extends DatabaseDriver {
 
   @override
   Future<void> createTable(String table, Map<String, String> columns) async {
-    final cols = columns.entries
-        .map((e) =>
-            "${e.key} ${e.value.replaceAll('AUTOINCREMENT', 'AUTO_INCREMENT')}")
-        .join(", ");
-    final sql = "CREATE TABLE IF NOT EXISTS $table ($cols);";
-    await _connection.query(sql);
+    try {
+      final schema = _schemas[table];
+      final columnDefinitions = columns.entries
+          .map((e) =>
+              "${e.key} ${e.value.replaceAll('AUTOINCREMENT', 'AUTO_INCREMENT')}")
+          .toList();
+
+      // Adiciona as foreign keys se existirem
+      if (schema?.foreignKeys != null && schema!.foreignKeys.isNotEmpty) {
+        columnDefinitions.addAll(
+          schema.foreignKeys.map((fk) => fk.toSql()),
+        );
+      }
+
+      final sql =
+          "CREATE TABLE IF NOT EXISTS $table (${columnDefinitions.join(', ')})";
+      await _connection.query(sql);
+    } catch (e) {
+      rethrow;
+    }
   }
 }

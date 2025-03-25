@@ -1,6 +1,6 @@
 name: dartonic
 description: A database query builder inspired by Drizzle. It allows you to connect to various databases (SQLite, PostgreSQL, MySQL) and perform database operations using a fluent API.
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/evandersondev/dartonic
 
 environment:

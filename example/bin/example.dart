@@ -4,51 +4,72 @@ import 'package:dartonic/dartonic.dart';
 void main() async {
   final app = Darto();
 
-  final usersTable = sqliteTable('users', {
+  final events = sqliteTable('events', {
     'id': integer().primaryKey(autoIncrement: true),
-    'name': text().notNull(),
-    'created_at': datetime().defaultNow(),
+    'name': text(),
+    'date': timestamp(),
   });
 
-  final rolesTable = sqliteTable('roles', {
+  // Definindo a tabela de attendees (participantes)
+  final attendees = sqliteTable('attendees', {
     'id': integer().primaryKey(autoIncrement: true),
-    'name': text().notNull(),
-    'created_at': datetime().defaultNow(),
+    'name': text(),
+    'eventId': integer().references(() => 'events.id'),
   });
 
-  final userRolesTable = sqliteTable(
-    'user_roles',
-    {
-      'user_id': integer().notNull(),
-      'role_id': integer().notNull(),
-      'created_at': datetime().defaultNow(),
+  // Relacionamento entre eventos e participantes (one-to-many)
+  final eventsRelations = relations(
+    events,
+    (builder) => {
+      'attendees': builder.many(
+        'attendees',
+        fields: ['id'],
+        references: ['eventId'],
+      ),
     },
-    foreignKeys: [
-      ForeignKey(
-        column: 'user_id',
-        references: 'users',
-        referencesColumn: 'id',
-        onDelete: ReferentialAction.cascade,
-      ),
-      ForeignKey(
-        column: 'role_id',
-        references: 'roles',
-        referencesColumn: 'id',
-        onDelete: ReferentialAction.cascade,
-      ),
-    ],
+  );
+
+  // Relacionamento entre participantes e eventos (many-to-one)
+  final attendeesRelations = relations(
+    attendees,
+    (builder) => {
+      'event': builder.one('events', fields: ['eventId'], references: ['id']),
+    },
   );
 
   final dartonic = Dartonic("sqlite:database/dartonic.db", [
-    usersTable,
-    rolesTable,
-    userRolesTable,
+    events,
+    attendees,
+    eventsRelations,
+    attendeesRelations,
   ]);
-  await dartonic.sync();
 
-  // Inserir mais dados de teste
-  // await db.insert('users').values({'name': 'Jane Doe'});
-  // await db.insert('users').values({'name': 'John Doe'});
+  final db = await dartonic.sync();
+
+  await db.insert("events").values({
+    'name': 'Tech Conference',
+    'date': DateTime.now().toIso8601String(),
+  });
+
+  // Inserindo participantes para o evento com id 1 (assumindo que o evento inserido tem id = 1)
+  await db.insert("attendees").values({'name': 'John Doe', 'eventId': 1});
+  await db.insert("attendees").values({'name': 'Jane Doe', 'eventId': 1});
+
+  // Selecionando todos os eventos com seus participantes
+  final eventsWithAttendees = await db
+      .select()
+      .from("events")
+      .innerJoin("attendees", eq("events.id", "attendees.eventId"));
+  print("Eventos com participantes:");
+  print(eventsWithAttendees);
+
+  // Selecionando todos os participantes com seus eventos
+  final attendeesWithEvents = await db
+      .select()
+      .from("attendees")
+      .innerJoin("events", eq("attendees.eventId", "events.id"));
+  print("Participantes com eventos:");
+  print(attendeesWithEvents);
 
   // await db.insert('roles').values({'name': 'user'});
   // await db.insert('roles').values({'name': 'admin'});

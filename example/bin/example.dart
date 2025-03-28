@@ -23,18 +23,11 @@ void main() async {
       'role_id': integer().notNull(),
       'created_at': datetime().defaultNow(),
     },
-    foreignKeys: [
-      ForeignKey(
-        column: 'user_id',
-        references: 'users',
-        referencesColumn: 'id',
-        onDelete: ReferentialAction.cascade,
-      ),
-      ForeignKey(
-        column: 'role_id',
-        references: 'roles',
-        referencesColumn: 'id',
-        onDelete: ReferentialAction.cascade,
+    () => [
+      foreignKey(
+        columns: ['book_id'],
+        foreignTable: 'books',
+        foreignColumns: ['id'],
       ),
     ],
   );

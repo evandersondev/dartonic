@@ -1,4 +1,5 @@
 import 'column.dart';
+import 'constrants.dart';
 
 /// Tipos de ações para foreign keys
 enum ReferentialAction {
@@ -73,11 +74,37 @@ class TableSchema {
 
 /// A classe Table estende TableSchema para poder ser usada no lugar de um TableSchema
 class Table extends TableSchema {
+  final List<TableConstraint> constraints;
+
   Table(
     super.name,
     super.columns, {
-    super.foreignKeys = const [],
+    super.foreignKeys,
+    this.constraints = const [],
   });
+}
+
+typedef TableConstraintsCallback = List<TableConstraint> Function();
+
+Table sqliteTable(String name, Map<String, ColumnType> columns,
+    [TableConstraintsCallback? constraints]) {
+  final cols = columns.map((key, value) {
+    final colName = value.columnName ?? key;
+
+    if (!supportedSqliteTypes.contains(value.baseType)) {
+      throw Exception(
+        "O tipo de coluna '${value.baseType}' não é suportado pelo SQLite.",
+      );
+    }
+
+    return MapEntry(colName, value);
+  });
+
+  return Table(
+    name,
+    Map.from(cols),
+    constraints: constraints != null ? constraints() : [],
+  );
 }
 
 /// Tipos suportados para SQLite
@@ -138,25 +165,25 @@ Table mysqlTable(
   return Table(name, Map.from(cols), foreignKeys: foreignKeys);
 }
 
-Table sqliteTable(
-  String name,
-  Map<String, ColumnType> columns, {
-  List<ForeignKey> foreignKeys = const [],
-}) {
-  final cols = columns.map((key, value) {
-    final colName = value.columnName ?? key;
+// Table sqliteTable(
+//   String name,
+//   Map<String, ColumnType> columns, {
+//   List<ForeignKey> foreignKeys = const [],
+// }) {
+//   final cols = columns.map((key, value) {
+//     final colName = value.columnName ?? key;
 
-    if (!supportedSqliteTypes.contains(value.baseType)) {
-      throw Exception(
-        "O tipo de coluna '${value.baseType}' não é suportado pelo SQLite.",
-      );
-    }
+//     if (!supportedSqliteTypes.contains(value.baseType)) {
+//       throw Exception(
+//         "O tipo de coluna '${value.baseType}' não é suportado pelo SQLite.",
+//       );
+//     }
 
-    return MapEntry(colName, value);
-  });
+//     return MapEntry(colName, value);
+//   });
 
-  return Table(name, Map.from(cols), foreignKeys: foreignKeys);
-}
+//   return Table(name, Map.from(cols), foreignKeys: foreignKeys);
+// }
 
 Table pgTable(
   String name,

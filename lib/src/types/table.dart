@@ -1,7 +1,6 @@
 import 'column.dart';
 import 'constrants.dart';
 
-/// Tipos de ações para foreign keys
 enum ReferentialAction {
   cascade,
   restrict,
@@ -10,7 +9,6 @@ enum ReferentialAction {
   setDefault,
 }
 
-/// Definição de uma foreign key
 class ForeignKey {
   final String column;
   final String references;
@@ -72,7 +70,6 @@ class TableSchema {
   });
 }
 
-/// A classe Table estende TableSchema para poder ser usada no lugar de um TableSchema
 class Table extends TableSchema {
   final List<TableConstraint> constraints;
 
@@ -86,28 +83,6 @@ class Table extends TableSchema {
 
 typedef TableConstraintsCallback = List<TableConstraint> Function();
 
-Table sqliteTable(String name, Map<String, ColumnType> columns,
-    [TableConstraintsCallback? constraints]) {
-  final cols = columns.map((key, value) {
-    final colName = value.columnName ?? key;
-
-    if (!supportedSqliteTypes.contains(value.baseType)) {
-      throw Exception(
-        "O tipo de coluna '${value.baseType}' não é suportado pelo SQLite.",
-      );
-    }
-
-    return MapEntry(colName, value);
-  });
-
-  return Table(
-    name,
-    Map.from(cols),
-    constraints: constraints != null ? constraints() : [],
-  );
-}
-
-/// Tipos suportados para SQLite
 const List<String> supportedSqliteTypes = [
   "INTEGER",
   "TEXT",
@@ -116,7 +91,6 @@ const List<String> supportedSqliteTypes = [
   "DATETIME"
 ];
 
-/// Tipos suportados para MySQL
 const List<String> supportedMySQLTypes = [
   "SERIAL",
   "VARCHAR",
@@ -142,11 +116,32 @@ const List<String> supportedMySQLTypes = [
   "ENUM"
 ];
 
-/// Funções para criar tabelas para diferentes bancos de dados
+Table sqliteTable(String name, Map<String, ColumnType> columns,
+    [TableConstraintsCallback? constraints]) {
+  final cols = columns.map((key, value) {
+    final colName = value.columnName ?? key;
+
+    if (!supportedSqliteTypes.contains(value.baseType)) {
+      throw Exception(
+        "O tipo de coluna '${value.baseType}' não é suportado pelo SQLite.",
+      );
+    }
+
+    return MapEntry(colName, value);
+  });
+
+  return Table(
+    name,
+    Map.from(cols),
+    constraints: constraints != null ? constraints() : [],
+  );
+}
+
 Table mysqlTable(
   String name,
   Map<String, ColumnType> columns, {
   List<ForeignKey> foreignKeys = const [],
+  TableConstraintsCallback? constraints,
 }) {
   final cols = columns.map((key, value) {
     final colName = value.columnName ?? key;
@@ -162,28 +157,13 @@ Table mysqlTable(
     return MapEntry(colName, value);
   });
 
-  return Table(name, Map.from(cols), foreignKeys: foreignKeys);
+  return Table(
+    name,
+    Map.from(cols),
+    constraints: constraints != null ? constraints() : [],
+    foreignKeys: foreignKeys,
+  );
 }
-
-// Table sqliteTable(
-//   String name,
-//   Map<String, ColumnType> columns, {
-//   List<ForeignKey> foreignKeys = const [],
-// }) {
-//   final cols = columns.map((key, value) {
-//     final colName = value.columnName ?? key;
-
-//     if (!supportedSqliteTypes.contains(value.baseType)) {
-//       throw Exception(
-//         "O tipo de coluna '${value.baseType}' não é suportado pelo SQLite.",
-//       );
-//     }
-
-//     return MapEntry(colName, value);
-//   });
-
-//   return Table(name, Map.from(cols), foreignKeys: foreignKeys);
-// }
 
 Table pgTable(
   String name,

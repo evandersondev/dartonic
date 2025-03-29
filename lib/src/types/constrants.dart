@@ -1,5 +1,6 @@
-import 'types.dart';
+import 'table.dart';
 
+// Classe base para constraints
 abstract class TableConstraint {
   String toSql();
 }
@@ -7,7 +8,7 @@ abstract class TableConstraint {
 // Classe para índices
 class IndexConstraint extends TableConstraint {
   final String name;
-  final List<String> columns;
+  List<String> columns;
   final bool unique;
 
   IndexConstraint(this.name, this.columns, {this.unique = false});
@@ -15,18 +16,19 @@ class IndexConstraint extends TableConstraint {
   @override
   String toSql() {
     final type = unique ? 'UNIQUE INDEX' : 'INDEX';
-    return 'CREATE $type IF NOT EXISTS $name ON ($columns)';
+    return 'CREATE $type IF NOT EXISTS $name ON (${columns.join(', ')})';
   }
 
-  static IndexConstraint on(List<String> columns) {
-    return IndexConstraint('idx_${columns.join('_')}', columns);
+  IndexConstraint on(List<String> columns) {
+    this.columns = columns;
+    return this;
   }
 }
 
 // Classe para unique constraints
 class UniqueConstraint extends TableConstraint {
   final String? name;
-  final List<String> columns;
+  List<String> columns;
 
   UniqueConstraint({this.name, required this.columns});
 
@@ -36,8 +38,9 @@ class UniqueConstraint extends TableConstraint {
     return '${constraintName}UNIQUE (${columns.join(', ')})';
   }
 
-  static UniqueConstraint on(List<String> columns) {
-    return UniqueConstraint(columns: columns);
+  UniqueConstraint on(List<String> columns) {
+    this.columns = columns;
+    return this;
   }
 }
 
@@ -45,13 +48,20 @@ class UniqueConstraint extends TableConstraint {
 class PrimaryKeyConstraint extends TableConstraint {
   final String? name;
   final List<String> columns;
+  final bool autoIncrement;
 
-  PrimaryKeyConstraint({this.name, required this.columns});
+  PrimaryKeyConstraint(
+      {this.name, required this.columns, this.autoIncrement = false});
 
   @override
   String toSql() {
     final constraintName = name != null ? 'CONSTRAINT $name ' : '';
-    return '${constraintName}PRIMARY KEY (${columns.join(', ')})';
+    final autoIncrementClause = autoIncrement ? 'AUTOINCREMENT' : '';
+    return '${constraintName}PRIMARY KEY $autoIncrementClause (${columns.join(', ')})';
+  }
+
+  PrimaryKeyConstraint on(List<String> columns) {
+    return PrimaryKeyConstraint(name: name, columns: columns);
   }
 }
 
@@ -103,6 +113,17 @@ class ForeignKeyConstraint extends TableConstraint {
         return 'NO ACTION';
     }
   }
+
+  ForeignKeyConstraint on(List<String> columns) {
+    return ForeignKeyConstraint(
+      name: name,
+      columns: columns,
+      foreignTable: foreignTable,
+      foreignColumns: foreignColumns,
+      onDelete: onDelete,
+      onUpdate: onUpdate,
+    );
+  }
 }
 
 // Classe para check constraints
@@ -122,9 +143,12 @@ class CheckConstraint extends TableConstraint {
 IndexConstraint index(String name) => IndexConstraint(name, []);
 UniqueConstraint unique([String? name]) =>
     UniqueConstraint(name: name, columns: []);
+UniqueConstraint uniqueIndex(String name) =>
+    UniqueConstraint(name: name, columns: []);
 PrimaryKeyConstraint primaryKey(
-        {String? name, required List<String> columns}) =>
-    PrimaryKeyConstraint(name: name, columns: columns);
+        {String? name, required List<String> columns, autoIncrement = false}) =>
+    PrimaryKeyConstraint(
+        name: name, columns: columns, autoIncrement: autoIncrement);
 ForeignKeyConstraint foreignKey({
   String? name,
   required List<String> columns,

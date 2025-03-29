@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:sqlite3/sqlite3.dart';
 
+import '../types/constrants.dart';
 import '../types/table.dart';
+
 import 'driver.dart';
 
 class SqliteDriverImpl extends DatabaseDriver {
@@ -51,13 +53,21 @@ class SqliteDriverImpl extends DatabaseDriver {
   @override
   Future<void> createTable(String table, Map<String, String> columns) async {
     final schema = schemas[table];
-    final columnDefinitions =
+    final List<String> columnDefinitions =
         columns.entries.map((e) => "${e.key} ${e.value}").toList();
+
+    if (schema is Table && schema.constraints.isNotEmpty) {
+      for (final constraint in schema.constraints) {
+        if (constraint is! IndexConstraint) {
+          columnDefinitions.add(constraint.toSql());
+        }
+      }
+    }
 
     if (schema?.foreignKeys != null && schema!.foreignKeys.isNotEmpty) {
       for (final fk in schema.foreignKeys) {
-        final foreignKeyDef = _buildForeignKeyConstraint(fk);
-        columnDefinitions.add(foreignKeyDef);
+        final fkDef = _buildForeignKeyConstraint(fk);
+        columnDefinitions.add(fkDef);
       }
     }
 
@@ -71,6 +81,15 @@ class SqliteDriverImpl extends DatabaseDriver {
       _connection.execute(sql);
     } catch (e) {
       rethrow;
+    }
+
+    if (schema is Table && schema.constraints.isNotEmpty) {
+      for (final constraint in schema.constraints) {
+        if (constraint is IndexConstraint) {
+          final indexSql = constraint.toSql();
+          _connection.execute(indexSql);
+        }
+      }
     }
   }
 

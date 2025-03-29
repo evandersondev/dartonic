@@ -2,8 +2,8 @@
   <img src="./assets/logo.png" width="200px" align="center" alt="Dartonic logo" />
   <h1 align="center">Dartonic</h1>
   <p align="center">
-  <a href="https://github.com/evandersondev/dartonic">🍷 Dartonic Github</a>
-  <br/>
+    <a href="https://github.com/evandersondev/dartonic">🍷 Dartonic Github</a>
+    <br/>
     A database query builder inspired by <a href="https://drizzledb.com">Drizzle</a>. It allows you to connect to various databases (SQLite, PostgreSQL, MySQL) and perform database operations using a fluent API.
   </p>
 </p>
@@ -27,17 +27,18 @@ If you find Dartonic useful, please consider supporting its development 🌟[Buy
 - [Connecting to a Database](#connecting-to-a-database)
 - [Defining Tables](#defining-tables)
   - [SQLite Example](#sqlite-example)
-  - [PostgreSQL Example](#postgresql-example)
+  - [PostgreSQL Example (Not Supported Yet)](#postgresql-example-not-supported-yet)
   - [MySQL Example](#mysql-example)
+- [Index and Constraints Updates](#index-and-constraints-updates)
 - [Working with Relationships](#working-with-relationships)
 - [Querying the Database](#querying-the-database)
   - [Simple Queries](#simple-queries)
   - [Complex Queries](#complex-queries)
 - [Supported Methods & Examples](#supported-methods--examples)
   - [SELECT](#select)
-  - [INSERT](#insert-with-returning)
-  - [UPDATE](#update-with-returning)
-  - [DELETE](#delete-with-returning)
+  - [INSERT](#insert)
+  - [UPDATE](#update)
+  - [DELETE](#delete)
   - [Join Queries](#join-queries)
   - [Filter Conditions](#filter-conditions)
 - [Limitations & Unsupported Types](#limitations--unsupported-types)
@@ -64,7 +65,7 @@ Add Dartonic to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dartonic: ^0.0.2
+  dartonic: ^0.0.3
 ```
 
 <br/>
@@ -138,7 +139,7 @@ void main() async {
 
 <br/>
 
-Get instance Dartonic in anywhere in your project:
+Get the Dartonic instance anywhere in your project:
 
 ```dart
 final db = dartonic.instance;
@@ -174,17 +175,24 @@ final usersTable = sqliteTable('users', {
   'created_at': timestamp().notNull().defaultNow(),
   'updated_at': timestamp().notNull().defaultNow(),
 });
+```
 
-final ordersTable = sqliteTable('orders', {
-  'id': integer().primaryKey(autoIncrement: true),
-  'user_id': integer(columnName: 'user_id'),
-  'total': integer(),
-});
+**Generated SQL Example:**
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  age INTEGER,
+  email TEXT NOT NULL UNIQUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 <br/>
 
-### PostgreSQL Example
+### PostgreSQL Example (Not Supported Yet)
 
 > **Note:** Some modifiers or functions may differ on PostgreSQL. Check the PostgreSQL documentation for supported default functions.
 
@@ -194,6 +202,16 @@ final usersTable = pgTable('users', {
   'name': varchar(length: 100).notNull(),
   'age': integer(),
 });
+```
+
+**Generated SQL Example:**
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL GENERATED ALWAYS AS IDENTITY,
+  name VARCHAR(100) NOT NULL,
+  age INTEGER
+);
 ```
 
 <br/>
@@ -209,6 +227,101 @@ final usersTable = mysqlTable('users', {
 });
 ```
 
+**Generated SQL Example:**
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL
+);
+```
+
+<br/>
+
+---
+
+<br/>
+
+## Index and Constraints Updates
+
+Dartonic now supports an enhanced approach for defining indexes and constraints using the `.on` method. This method is available in classes like `IndexConstraint`, `UniqueConstraint`, and `PrimaryKeyConstraint`. Here’s how they work:
+
+- **Index Example:**  
+  Define an index for a table column by calling the `index` helper and using `.on()`.  
+  **SQL Generated:**
+
+  ```sql
+  CREATE INDEX IF NOT EXISTS name_idx ON (name);
+  ```
+
+  **Example:**
+
+  ```dart
+  final usersTable = sqliteTable(
+    'users',
+    {
+      'id': integer().primaryKey(autoIncrement: true),
+      'name': text().notNull(),
+      'email': text().notNull(),
+      'age': integer(),
+      'created_at': datetime().defaultNow(),
+    },
+    () => [
+      index('name_idx').on(['name']),
+    ],
+  );
+  ```
+
+- **Constraint Example:**  
+  Define a unique constraint using `unique` with `.on()` to enforce uniqueness over the specified columns.  
+  **SQL Generated:**
+
+  ```sql
+  CONSTRAINT unique_book UNIQUE (title, author)
+  ```
+
+  **Example:**
+
+  ```dart
+  final booksTable = sqliteTable(
+    'books',
+    {
+      'id': integer().primaryKey(autoIncrement: true),
+      'title': text().notNull(),
+      'author': text().notNull(),
+      'published_year': integer(),
+    },
+    () => [
+      unique('unique_book').on(['title', 'author']),
+    ],
+  );
+  ```
+
+- **PrimaryKey Example:**  
+  The primary key constraint can be defined inline with the column definition or as a table-level constraint. When defined as a table constraint, the SQL is generated as follows:  
+  **SQL Generated:**
+  ```sql
+  CONSTRAINT pk_users PRIMARY KEY (id)
+  ```
+  **Example:**
+  ```dart
+  final usersTable = sqliteTable(
+    'users',
+    {
+      'id': integer(),
+      'name': text().notNull(),
+      'email': text().notNull(),
+      'age': integer(),
+      'created_at': datetime().defaultNow(),
+    },
+    () => [
+      primaryKey(columns: ['id']),
+    ],
+  );
+  ```
+
+💡 **Note:** Depending on the database (SQLite, MySQL, etc.), Dartonic adapts the generated SQL appropriately. For example, on MySQL, `"AUTOINCREMENT"` is converted to `"AUTO_INCREMENT"`.
+
 <br/>
 
 ---
@@ -219,9 +332,7 @@ final usersTable = mysqlTable('users', {
 
 Dartonic allows you to define relationships between tables. This makes it easier to perform related queries using JOINs. Relationships are defined through helper methods (for example, a `relations` function) which let you map the associations.
 
-Here’s an example on how to define one-to-one and one-to-many relationships:
-
-<br/>
+Here’s an example of defining one-to-one and one-to-many relationships:
 
 ```dart
 // Defining the base tables.
@@ -268,7 +379,7 @@ final postsRelations = relations(
   },
 );
 
-// Now you can initialize Dartonic with the main tables and include relationship meta-information.
+// Now initialize Dartonic with the main tables and relationship meta-information.
 final dartonic = Dartonic("sqlite://database.db", [
   usersTable,
   profileTable,
@@ -278,11 +389,7 @@ final dartonic = Dartonic("sqlite://database.db", [
 ]);
 ```
 
-<br/>
-
 Once the relationships are defined, you can perform JOIN queries with ease:
-
-<br/>
 
 ```dart
 // Example JOIN query: Get users with their profile bio.
@@ -294,10 +401,14 @@ final query = db
     })
     .from('users')
     .innerJoin('profile_info', eq("users.id", "profile_info.user_id"));
+```
 
-print(query.toSql());
-final result = await query;
-print(result);
+**Generated SQL Example for JOIN:**
+
+```sql
+SELECT users.name AS userName, users.email AS userEmail, profile_info.bio AS bio
+FROM users
+INNER JOIN profile_info ON users.id = profile_info.user_id;
 ```
 
 <br/>
@@ -318,19 +429,29 @@ After synchronizing the tables using `sync()`, you can build and execute queries
 
   ```dart
   final users = await db.select().from('users');
-  print(users);
+  ```
+
+  **Generated SQL:**
+
+  ```sql
+  SELECT * FROM users;
   ```
 
 - **SELECT specific columns using a map:**
 
-  Here, the key represents the alias (renamed column) and the value represents the actual column.
+  Here, the key represents the alias and the value represents the actual column.
 
   ```dart
   final result = await db.select({
     'fieldId': 'users.id',
     'fieldName': 'users.name',
   }).from('users');
-  print(result);
+  ```
+
+  **Generated SQL:**
+
+  ```sql
+  SELECT users.id AS fieldId, users.name AS fieldName FROM users;
   ```
 
 <br/>
@@ -351,10 +472,17 @@ final complexQuery = db
     .orderBy("users.name")
     .limit(10)
     .offset(0);
+```
 
-print(complexQuery.toSql());
-final result = await complexQuery;
-print(result);
+**Generated SQL Example:**
+
+```sql
+SELECT users.name AS userName, orders.total AS orderTotal
+FROM users
+INNER JOIN orders ON users.id = orders.user_id
+WHERE orders.total > ?
+ORDER BY users.name ASC
+LIMIT 10 OFFSET 0;
 ```
 
 <br/>
@@ -371,8 +499,6 @@ Below are some examples demonstrating all available methods within Dartonic's qu
 
 ### SELECT
 
-Select columns by specifying a map:
-
 ```dart
 final users = await db
     .select({
@@ -380,14 +506,11 @@ final users = await db
       'age': 'users.birthday'
     })
     .from('users');
-print(users);
 ```
 
 <br/>
 
 ### INSERT
-
-Insert only or insert a record and return the full record as well as partial (only id):
 
 ```dart
 // Insert only
@@ -404,11 +527,10 @@ final insertedUser = await db
     .values({
       'name': "Dan",
       'age': 28
-      })
-      .returning();
+    })
+    .returning();
 
 print("Inserted with full RETURNING:");
-print(insertedUser);
 
 // Insert and return only id
 final insertedPartial = await db
@@ -420,18 +542,25 @@ final insertedPartial = await db
     .returning(insertedId: 'users.id');
 
 print("Inserted with partial RETURNING (only id):");
-print(insertedPartial);
+```
+
+**Generated SQL Example for Insertion:**
+
+```sql
+-- Insertion without RETURNING
+INSERT INTO users (name, age) VALUES (?, ?);
+
+-- Insertion with RETURNING (if supported)
+INSERT INTO users (name, age) VALUES (?, ?) RETURNING id;
 ```
 
 <br/>
 
 ### UPDATE
 
-Update only or update a record and return the updated information:
-
 ```dart
 // Update only
- await db
+await db
     .update('users')
     .set({'name': "Daniel", 'age': 29})
     .where(eq("users.id", 1));
@@ -444,14 +573,21 @@ final updatedUser = await db
     .returning();
 
 print("Updated with full RETURNING:");
-print(updatedUser);
+```
+
+**Generated SQL Example for Update:**
+
+```sql
+-- Update without RETURNING
+UPDATE users SET name = ?, age = ? WHERE users.id = ?;
+
+-- Update with RETURNING (if supported)
+UPDATE users SET name = ?, age = ? WHERE users.id = ? RETURNING *;
 ```
 
 <br/>
 
 ### DELETE
-
-Delete only or delete a record and get the deleted row's data:
 
 ```dart
 // Delete only
@@ -467,18 +603,25 @@ final deletedUser = await db
     .returning();
 
 print("Deleted with full RETURNING:");
-print(deletedUser);
+```
+
+**Generated SQL Example for Delete:**
+
+```sql
+-- Delete without RETURNING
+DELETE FROM users WHERE users.id = ?;
+
+-- Delete with RETURNING (if supported)
+DELETE FROM users WHERE users.id = ? RETURNING *;
 ```
 
 <br/>
 
 ### Join Queries
 
-Perform various types of JOINs:
-
 ```dart
 // INNER JOIN example: users and orders
-final joinQuery = db
+final joinQuery = await db
     .select({
       'userName': 'users.name',
       'orderTotal': 'orders.total'
@@ -488,64 +631,65 @@ final joinQuery = db
     .where(gt("orders.total", 100));
 
 print("SQL INNER JOIN with filter:");
-print(joinQuery.toSql());
+```
 
-final joinResult = await joinQuery;
-print(joinResult);
+**Generated SQL Example for INNER JOIN:**
+
+```sql
+SELECT users.name AS userName, orders.total AS orderTotal
+FROM users
+INNER JOIN orders ON users.id = orders.user_id
+WHERE orders.total > ?;
 ```
 
 <br/>
 
 ### Filter Conditions
 
-You can use a variety of filter methods:
-
 ```dart
 // Equality filter (eq)
-final eqQuery = db.select().from("users").where(eq("users.age", 30));
-
-print("SQL eq:");
-print(eqQuery.toSql());
-print(await eqQuery);
+final eqQuery = await db.select().from("users").where(eq("users.age", 30));
 
 // Greater-than filter (gt)
-final gtQuery = db.select().from("users").where(gt("users.age", 25));
-
-print("SQL gt:");
-print(gtQuery.toSql());
-print(await gtQuery);
+final gtQuery = await db.select().from("users").where(gt("users.age", 25));
 
 // In array filter
-final inArrayQuery = db.select().from("users").where(inArray("users.age", [25, 35]));
-
-print("SQL inArray:");
-print(inArrayQuery.toSql());
-print(await inArrayQuery);
+final inArrayQuery = await db.select().from("users").where(inArray("users.age", [25, 35]));
 
 // Between filter
-final betweenQuery = db.select().from("users").where(between("users.age", 26, 34));
-
-print("SQL between:");
-print(betweenQuery.toSql());
-print(await betweenQuery);
+final betweenQuery = await db.select().from("users").where(between("users.age", 26, 34));
 
 // Composite filter with AND
-final andQuery = db.select().from("users").where(
+final andQuery = await db.select().from("users").where(
   and([gt("users.age", 25), lt("users.age", 35)])
 );
-
-print("SQL and:");
-print(andQuery.toSql());
-print(await andQuery);
 
 // Composite filter with OR
 final orQuery = db.select().from("users").where(
   or([lt("users.age", 25), gt("users.age", 35)])
 );
+```
 
-print("SQL or:");
-print(orQuery.toSql());
-print(await orQuery);
+**Generated SQL Examples for Filters:**
+
+```sql
+-- Equality Filter:
+SELECT * FROM users WHERE users.age = ?;
+
+-- Greater-than Filter:
+SELECT * FROM users WHERE users.age > ?;
+
+-- In Array Filter:
+SELECT * FROM users WHERE users.age IN (?, ?);
+
+-- Between Filter:
+SELECT * FROM users WHERE users.age BETWEEN ? AND ?;
+
+-- Composite AND Filter:
+SELECT * FROM users WHERE (users.age > ? AND users.age < ?);
+
+-- Composite OR Filter:
+SELECT * FROM users WHERE (users.age < ? OR users.age > ?);
 ```
 
 <br/>
@@ -559,13 +703,10 @@ print(await orQuery);
 - **SQLite Restrictions:**
 
   - Some advanced SQL features like `ILIKE` are not natively supported by SQLite. Although Dartonic generates the SQL, not all features will run as expected on SQLite.
-
   - Ensure you are using SQLite version 3.35.0 or newer if you plan to use the `RETURNING` clause.
 
 - **Other Databases:**
-
   - PostgreSQL fully supports the majority of features such as `RETURNING`, `JOIN`s, and advanced filters.
-
   - MySQL support might vary; confirm your MySQL version supports specific SQL clauses used by Dartonic.
 
 <br/>
@@ -576,7 +717,7 @@ print(await orQuery);
 
 ## Contributing
 
-Contributions are very welcome! If you find bugs, have suggestions, or want to contribute new features, please submit an [issue](https://github.com/yourusername/dartonic/issues) or a pull request.
+Contributions are very welcome! If you find bugs, have suggestions, or want to contribute new features, please submit an [issue](https://github.com/evandersondev/dartonic/issues) or a pull request.
 
 ---
 

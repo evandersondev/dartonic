@@ -1,6 +1,8 @@
 import 'package:mysql1/mysql1.dart' as mysql;
 
+import '../types/constrants.dart';
 import '../types/table.dart';
+
 import 'driver.dart';
 
 class MysqlDriverImpl extends DatabaseDriver {
@@ -52,21 +54,41 @@ class MysqlDriverImpl extends DatabaseDriver {
   Future<void> createTable(String table, Map<String, String> columns) async {
     try {
       final schema = _schemas[table];
-      final columnDefinitions = columns.entries
+      final List<String> columnDefinitions = columns.entries
           .map((e) =>
               "${e.key} ${e.value.replaceAll('AUTOINCREMENT', 'AUTO_INCREMENT')}")
           .toList();
 
-      // Adiciona as foreign keys se existirem
+      if (schema is Table && schema.constraints.isNotEmpty) {
+        final constraintsSql = schema.constraints
+            .where((c) => c is! IndexConstraint)
+            .map((c) => c.toSql())
+            .toList();
+        if (constraintsSql.isNotEmpty) {
+          columnDefinitions.addAll(constraintsSql);
+        }
+      }
+
       if (schema?.foreignKeys != null && schema!.foreignKeys.isNotEmpty) {
-        columnDefinitions.addAll(
-          schema.foreignKeys.map((fk) => fk.toSql()),
-        );
+        for (final fk in schema.foreignKeys) {
+          columnDefinitions.add(fk.toSql());
+        }
       }
 
       final sql =
           "CREATE TABLE IF NOT EXISTS $table (${columnDefinitions.join(', ')})";
       await _connection.query(sql);
+
+      if (schema is Table && schema.constraints.isNotEmpty) {
+        for (final constraint in schema.constraints) {
+          if (constraint is IndexConstraint) {
+            final indexSql = constraint
+                .toSql()
+                .replaceAll("AUTOINCREMENT", "AUTO_INCREMENT");
+            await _connection.query(indexSql);
+          }
+        }
+      }
     } catch (e) {
       rethrow;
     }

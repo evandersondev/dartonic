@@ -465,4 +465,151 @@ final usersRelations = relations(usersTable, (builder) => {
 // .where(eq('users.email', 'john@mail.com'));
 // print("SQL gerado (DELETE): ${deleteQuery.toSql()}");
 // await deleteQuery.execute();
+ final usersTable = sqliteTable('users', {
+    'id': integer().primaryKey(autoIncrement: true),
+    'name': text().notNull(),
+    'created_at': datetime().defaultNow(),
+  });
+
+  // final rolesTable = sqliteTable('roles', {
+  //   'id': integer().primaryKey(autoIncrement: true),
+  //   'name': text().notNull(),
+  //   'created_at': datetime().defaultNow(),
+  // });
+
+  final usersTable = sqliteTable('users', {
+    'id': integer().primaryKey(autoIncrement: true),
+    'name': text().notNull(),
+    'email': text().notNull(),
+    'age': integer(),
+    'created_at': datetime().defaultNow(),
+  });
+
+  // Definindo a tabela de livros
+  final booksTable = sqliteTable(
+    'books',
+    {
+      'id': integer(),
+      'title': text().notNull(),
+      'author': text().notNull(),
+      'published_year': integer(),
+    },
+    () => [
+      unique('unique_book').on(['title', 'author']),
+      primaryKey(columns: ['id']),
+    ],
+  );
+
+  // // Definindo a tabela de empréstimos
+  // final loansTable = sqliteTable(
+  //   'loans',
+  //   {
+  //     'id': integer().primaryKey(autoIncrement: true),
+  //     'user_id': integer().references(() => 'users.id'),
+  //     'book_id': integer().references(() => 'books.id'),
+  //     'loan_date': datetime().defaultNow(),
+  //   },
+  //   () => [
+  //     foreignKey(
+  //       columns: ['user_id'],
+  //       foreignTable: 'users',
+  //       foreignColumns: ['id'],
+  //     ),
+  //     foreignKey(
+  //       columns: ['book_id'],
+  //       foreignTable: 'books',
+  //       foreignColumns: ['id'],
+  //     ),
+  //     primaryKey(columns: ['user_id', 'book_id']),
+  //   ],
+  // );
+
+  final dartonic = Dartonic("sqlite:database/dartonic.db", [
+    usersTable,
+    booksTable,
+  ]);
+  final db = await dartonic.sync();
+
+  // await db.insert("users").values({
+  //   'name': 'John Doe',
+  //   'email': 'john.doe@example.com',
+  //   'age': 25,
+  // });
+
+  await db.insert("books").values({
+    'title': 'Dart Programming',
+    'author': 'Jane Smith',
+    'published_year': 2021,
+  });
+
+  final users = await db.select().from("users");
+  final books = await db.select().from("books");
+
+  print("Users:");
+  print(users);
+
+  print("Books:");
+  print(books);
+
+  // Inserir mais dados de teste
+  // await db.insert('users').values({'name': 'Jane Doe'});
+  // await db.insert('users').values({'name': 'John Doe'});
+
+  // await db.insert('roles').values({'name': 'user'});
+  // await db.insert('roles').values({'name': 'admin'});
+
+  // Criar mais relacionamentos
+  // await db.insert('user_roles').values({
+  //   'user_id': 2, // John Doe
+  //   'role_id': 2, // role user
+  // });
+
+  // await db.insert('user_roles').values({
+  //   'user_id': 2, // Jane Doe
+  //   'role_id': 1, // role admin
+  // });
+
+  // Primeiro vamos garantir que o count está funcionando corretamente
+  // Primeiro, confirmamos que temos 2 roles no sistema
+  // final totalRoles = await db
+  //     .select()
+  //     .from('users')
+  //     .where(like('users.name', '%John%'));
+  // print('Total de Roles: $totalRoles');
+
+  // Query para buscar usuários e suas roles
+  // final usersWithRoles = await db
+  //     .select({
+  //       'name': 'users.name',
+  //       'total_roles': count(
+  //         'user_roles.role_id',
+  //         distinct: true,
+  //       ), // sql('COUNT(DISTINCT user_roles.role_id)'),
+  //     })
+  //     .from('users')
+  //     .innerJoin('user_roles', eq('users.id', 'user_roles.user_id'))
+  //     .groupBy(['users.id', 'users.name']);
+  // print('Usuários e suas roles: $usersWithRoles');
+
+  // // Query para buscar apenas usuários que têm TODAS as roles
+  // final usersWithAllRoles = await db
+  //     .select({
+  //       'name': 'users.name',
+  //       'total_roles': 'COUNT(DISTINCT user_roles.role_id)',
+  //     })
+  //     .from('users')
+  //     .innerJoin('user_roles', eq('users.id', 'user_roles.user_id'))
+  //     .groupBy(['users.id', 'users.name'])
+  //     .having(eq('COUNT(DISTINCT user_roles.role_id)', totalRoles[0]['total']));
+  // print('Usuários com todas as roles: $usersWithAllRoles');
+
+  // final userUpdate =
+  //     await db
+  //         .update('users')
+  //         .set({'name': 'John Doe Updated'})
+  //         .where(eq('id', 1))
+  //         .returning();
+  // print(userUpdate);
+
+  // await db.delete('users').where(eq('users.id', 1));
 ```

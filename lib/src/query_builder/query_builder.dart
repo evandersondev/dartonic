@@ -29,23 +29,35 @@ class QueryBuilder implements Future<dynamic> {
 
   QueryBuilder(this._driver, this._schemas);
 
+  String _escapeIdentifier(String identifier) {
+    if (identifier.contains('.')) {
+      return identifier.split('.').map((part) => '"$part"').join('.');
+    }
+    return '"$identifier"';
+  }
+
   QueryBuilder select([Map<String, String>? columns]) {
     _queryType = 'SELECT';
     if (columns == null) {
       _columns = ['*'];
     } else
-      _columns = columns.entries.map((e) => "${e.value} AS ${e.key}").toList();
+      _columns = columns.entries
+          .map((e) =>
+              "${_escapeIdentifier(e.value)} AS ${_escapeIdentifier(e.key)}")
+          .toList();
 
     return this;
   }
 
   QueryBuilder from(String table) {
-    _table = table;
+    _table = _escapeIdentifier(table);
+
     return this;
   }
 
   QueryBuilder groupBy(List<String> columns) {
-    _groupByClauses.addAll(columns);
+    _groupByClauses.addAll(columns.map(_escapeIdentifier));
+
     return this;
   }
 
@@ -74,7 +86,8 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   QueryBuilder orderBy(String column, [String direction = 'ASC']) {
-    _orderByClauses.add("$column $direction");
+    _orderByClauses.add("${_escapeIdentifier(column)} $direction");
+
     return this;
   }
 
@@ -89,25 +102,29 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   QueryBuilder innerJoin(String table, Condition condition) {
-    _joinClauses.add("INNER JOIN $table ON ${condition.clause}");
+    _joinClauses
+        .add("INNER JOIN ${_escapeIdentifier(table)} ON ${condition.clause}");
     _parameters.addAll(condition.values);
     return this;
   }
 
   QueryBuilder leftJoin(String table, Condition condition) {
-    _joinClauses.add("LEFT JOIN $table ON ${condition.clause}");
+    _joinClauses
+        .add("LEFT JOIN  ${_escapeIdentifier(table)} ON ${condition.clause}");
     _parameters.addAll(condition.values);
     return this;
   }
 
   QueryBuilder rightJoin(String table, Condition condition) {
-    _joinClauses.add("RIGHT JOIN $table ON ${condition.clause}");
+    _joinClauses
+        .add("RIGHT JOIN ${_escapeIdentifier(table)} ON ${condition.clause}");
     _parameters.addAll(condition.values);
     return this;
   }
 
   QueryBuilder fullJoin(String table, Condition condition) {
-    _joinClauses.add("FULL JOIN $table ON ${condition.clause}");
+    _joinClauses
+        .add("FULL JOIN ${_escapeIdentifier(table)} ON ${condition.clause}");
     _parameters.addAll(condition.values);
     return this;
   }
@@ -118,7 +135,10 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   QueryBuilder function(String function, String column, String alias) {
-    _columns = ["$function($column) AS $alias"];
+    _columns = [
+      "$function(${_escapeIdentifier(column)}) AS ${_escapeIdentifier(alias)}"
+    ];
+
     return this;
   }
 
@@ -136,7 +156,7 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   QueryBuilder insert(String table) {
-    _table = table;
+    _table = _escapeIdentifier(table);
     _queryType = 'INSERT';
     return this;
   }
@@ -160,7 +180,7 @@ class QueryBuilder implements Future<dynamic> {
 
   // Métodos para UPDATE
   QueryBuilder update(String table) {
-    _table = table;
+    _table = _escapeIdentifier(table);
     _queryType = 'UPDATE';
     return this;
   }
@@ -171,9 +191,14 @@ class QueryBuilder implements Future<dynamic> {
     return this;
   }
 
+  QueryBuilder returningId() {
+    _returningClause = "RETURNING id";
+    return this;
+  }
+
   // Métodos para DELETE
   QueryBuilder delete(String table) {
-    _table = table;
+    _table = _escapeIdentifier(table);
     _queryType = 'DELETE';
     return this;
   }
@@ -197,23 +222,24 @@ class QueryBuilder implements Future<dynamic> {
   QueryBuilder createTable(String table, Map<String, String> columns) {
     _queryType = 'CREATE_TABLE';
     _createTableSQL =
-        "CREATE TABLE IF NOT EXISTS $table (${columns.entries.map((e) => "${e.key} ${e.value}").join(', ')})";
+        "CREATE TABLE IF NOT EXISTS ${_escapeIdentifier(table)} (${columns.entries.map((e) => "${e.key} ${e.value}").join(', ')})";
     return this;
   }
 
   QueryBuilder dropTable(String table) {
     _queryType = 'DROP_TABLE';
-    _table = table;
+    _table = _escapeIdentifier(table);
     return this;
   }
 
   QueryBuilder addColumn(String columnName, String columnType) {
-    _alterTableCommands.add("ADD COLUMN $columnName $columnType");
+    _alterTableCommands
+        .add("ADD COLUMN ${_escapeIdentifier(columnName)} $columnType");
     return this;
   }
 
   QueryBuilder dropColumn(String columnName) {
-    _alterTableCommands.add("DROP COLUMN $columnName");
+    _alterTableCommands.add("DROP COLUMN ${_escapeIdentifier(columnName)}");
     return this;
   }
 
@@ -271,7 +297,7 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   String _buildInsert() {
-    final columns = _insertData.keys.join(', ');
+    final columns = _insertData.keys.map(_escapeIdentifier).join(', ');
     final placeholders = List.filled(_insertData.length, '?').join(', ');
     String sql = "INSERT INTO $_table ($columns) VALUES ($placeholders)";
     if (_returningClause != null) {
@@ -281,7 +307,9 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   String _buildUpdate() {
-    final setClause = _updateData.keys.map((key) => "$key = ?").join(", ");
+    final setClause = _updateData.keys
+        .map((key) => "${_escapeIdentifier(key)} = ?")
+        .join(", ");
     String sql = "UPDATE $_table SET $setClause";
     if (_whereClauses.isNotEmpty)
       sql += " WHERE ${_whereClauses.join(" AND ")}";

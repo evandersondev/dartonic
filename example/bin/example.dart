@@ -7,48 +7,52 @@ void main() async {
   final usersTable = sqliteTable('users', {
     'id': integer().primaryKey(autoIncrement: true),
     'name': text().notNull(),
-    'created_at': datetime().defaultNow(),
+    'email': text().notNull().unique(),
   });
 
-  final rolesTable = sqliteTable('roles', {
-    'id': integer().primaryKey(autoIncrement: true),
-    'name': text().notNull(),
-    'created_at': datetime().defaultNow(),
-  });
+  // final rolesTable = sqliteTable('roles', {
+  //   'id': integer().primaryKey(autoIncrement: true),
+  //   'name': text().notNull(),
+  //   'created_at': datetime().defaultNow(),
+  // });
 
-  final userRolesTable = sqliteTable(
-    'user_roles',
-    {
-      'user_id': integer().notNull(),
-      'role_id': integer().notNull(),
-      'created_at': datetime().defaultNow(),
-    },
-    foreignKeys: [
-      ForeignKey(
-        column: 'user_id',
-        references: 'users',
-        referencesColumn: 'id',
-        onDelete: ReferentialAction.cascade,
-      ),
-      ForeignKey(
-        column: 'role_id',
-        references: 'roles',
-        referencesColumn: 'id',
-        onDelete: ReferentialAction.cascade,
-      ),
-    ],
-  );
+  // final userRolesTable = sqliteTable(
+  //   'user_roles',
+  //   {
+  //     'user_id': integer().notNull(),
+  //     'role_id': integer().notNull(),
+  //     'created_at': datetime().defaultNow(),
+  //   },
+  //   foreignKeys: [
+  //     ForeignKey(
+  //       column: 'user_id',
+  //       references: 'users',
+  //       referencesColumn: 'id',
+  //       onDelete: ReferentialAction.cascade,
+  //     ),
+  //     ForeignKey(
+  //       column: 'role_id',
+  //       references: 'roles',
+  //       referencesColumn: 'id',
+  //       onDelete: ReferentialAction.cascade,
+  //     ),
+  //   ],
+  // );
 
-  final dartonic = Dartonic("sqlite:database/dartonic.db", [
-    usersTable,
-    rolesTable,
-    userRolesTable,
-  ]);
-  await dartonic.sync();
+  final dartonic = Dartonic("sqlite::memory:", [usersTable]);
+  final db = await dartonic.sync();
 
   // Inserir mais dados de teste
-  // await db.insert('users').values({'name': 'Jane Doe'});
-  // await db.insert('users').values({'name': 'John Doe'});
+  final user =
+      await db.insert('users').values({
+        'name': 'Jane Doe',
+        'email': 'janedoe@mail.com',
+      }).returningId();
+  await db.insert('users').values({
+    'name': 'John Doe',
+    'email': 'johndoe@mail.com',
+  });
+  print(user);
 
   // await db.insert('roles').values({'name': 'user'});
   // await db.insert('roles').values({'name': 'admin'});
@@ -71,6 +75,11 @@ void main() async {
   //     .from('users')
   //     .where(like('users.name', '%John%'));
   // print('Total de Roles: $totalRoles');
+  // final user = await db
+  //     .select()
+  //     .from('users')
+  //     .where(eq('users.email', 'johndoe@mail.com'));
+  // print(user);
 
   // Query para buscar usuários e suas roles
   // final usersWithRoles = await db

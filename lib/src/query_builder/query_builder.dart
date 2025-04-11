@@ -191,11 +191,6 @@ class QueryBuilder implements Future<dynamic> {
     return this;
   }
 
-  QueryBuilder returningId() {
-    _returningClause = "RETURNING id";
-    return this;
-  }
-
   // Métodos para DELETE
   QueryBuilder delete(String table) {
     _table = _escapeIdentifier(table);
@@ -204,17 +199,23 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   // Método returning para inserir cláusula RETURNING em INSERT, UPDATE ou DELETE.
-  QueryBuilder returning(
-      {String? insertedId, String? updatedId, String? deletedId}) {
-    if (insertedId != null) {
-      _returningClause = "RETURNING $insertedId";
-    } else if (updatedId != null) {
-      _returningClause = "RETURNING $updatedId";
-    } else if (deletedId != null) {
-      _returningClause = "RETURNING $deletedId";
-    } else {
+  QueryBuilder returning([List<String>? columns]) {
+    if (columns == null || columns.isEmpty) {
       _returningClause = "RETURNING *";
+    } else {
+      if (columns.length == 1 && columns.first == '*') {
+        _returningClause = "RETURNING *";
+        return this;
+      }
+
+      final escapedColumns = columns.map(_escapeIdentifier).join(', ');
+      _returningClause = "RETURNING $escapedColumns";
     }
+    return this;
+  }
+
+  QueryBuilder returningId() {
+    _returningClause = "RETURNING id";
     return this;
   }
 

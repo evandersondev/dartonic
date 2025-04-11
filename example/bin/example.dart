@@ -75,10 +75,7 @@ void main() async {
   //     .from('users')
   //     .where(like('users.name', '%John%'));
   // print('Total de Roles: $totalRoles');
-  // final user = await db
-  //     .select()
-  //     .from('users')
-  //     .where(eq('users.email', 'johndoe@mail.com'));
+  // final user = await db.select().from('users');
   // print(user);
 
   // Query para buscar usuários e suas roles

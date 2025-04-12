@@ -1,6 +1,10 @@
+## 0.0.4
+
+- Update retuning method.
+
 ## 0.0.3
 
-- Fix and update retuning method.
+- Fix retuning method.
 
 ## 0.0.2
 

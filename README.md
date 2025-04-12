@@ -64,7 +64,7 @@ Add Dartonic to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dartonic: ^0.0.3
+  dartonic: ^0.0.4
 ```
 
 <br/>

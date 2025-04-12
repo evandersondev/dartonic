@@ -1,6 +1,7 @@
 import 'package:mysql1/mysql1.dart' as mysql;
 
 import '../types/table.dart';
+
 import 'driver.dart';
 
 class MysqlDriverImpl extends DatabaseDriver {
@@ -57,7 +58,6 @@ class MysqlDriverImpl extends DatabaseDriver {
               "${e.key} ${e.value.replaceAll('AUTOINCREMENT', 'AUTO_INCREMENT')}")
           .toList();
 
-      // Adiciona as foreign keys se existirem
       if (schema?.foreignKeys != null && schema!.foreignKeys.isNotEmpty) {
         columnDefinitions.addAll(
           schema.foreignKeys.map((fk) => fk.toSql()),

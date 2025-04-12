@@ -3,6 +3,7 @@ import 'dart:async';
 import '../drivers/driver.dart';
 import '../types/table.dart';
 import '../utils/convertion_helper.dart';
+
 import 'condition.dart';
 
 class QueryBuilder implements Future<dynamic> {
@@ -30,6 +31,10 @@ class QueryBuilder implements Future<dynamic> {
   QueryBuilder(this._driver, this._schemas);
 
   String _escapeIdentifier(String identifier) {
+    if (identifier.toLowerCase().contains('count')) {
+      return identifier;
+    }
+
     if (identifier.contains('.')) {
       return identifier.split('.').map((part) => '"$part"').join('.');
     }

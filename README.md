@@ -16,7 +16,7 @@
 
 ### Support 💖
 
-If you find Dartonic useful, please consider supporting its development 🌟[Buy Me a Coffee](https://buymeacoffee.com/evandersondev).🌟 Your support helps us improve the framework and make it even better!
+If you find Dartonic useful, please consider supporting its development 🌟[Buy Me a Coffee](https://buymeacoffee.com/evandersondev).🌟 Your support helps us improve the package and make it even better!
 
 <br/>
 
@@ -64,7 +64,7 @@ Add Dartonic to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dartonic: ^0.0.2
+  dartonic: ^0.0.3
 ```
 
 <br/>
@@ -417,9 +417,9 @@ final insertedPartial = await db
       'name': "Partial Dan",
       'age': 30
     })
-    .returning(insertedId: 'users.id');
+    .returning(['id']);
 
-print("Inserted with partial RETURNING (only id):");
+print("Inserted with partial RETURNING {'id': 1}");
 print(insertedPartial);
 ```
 

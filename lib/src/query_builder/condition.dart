@@ -120,31 +120,3 @@ Condition or(List<Condition> conditions) {
   final values = conditions.expand((c) => c.values).toList();
   return Condition("($clauses)", values);
 }
-
-class ReturningOptions {
-  final bool insertedId;
-  final bool updatedId;
-  final bool deletedId;
-  final List<String>? columns;
-
-  ReturningOptions({
-    this.insertedId = false,
-    this.updatedId = false,
-    this.deletedId = false,
-    this.columns,
-  });
-
-  String build() {
-    if (columns != null) {
-      if (columns!.length == 1 && columns![0] == '*') return 'RETURNING *';
-      return 'RETURNING ${columns!.map(_escapeIdentifier).join(', ')}';
-    }
-
-    final parts = <String>[];
-    if (insertedId) parts.add('id AS inserted_id');
-    if (updatedId) parts.add('id AS updated_id');
-    if (deletedId) parts.add('id AS deleted_id');
-
-    return parts.isNotEmpty ? 'RETURNING ${parts.join(', ')}' : '';
-  }
-}

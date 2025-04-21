@@ -158,6 +158,43 @@ Table sqliteTable(
   return Table(name, Map.from(cols), foreignKeys: foreignKeys);
 }
 
+/// PostgreSQL types support
+const List<String> supportedPostgresTypes = [
+  "SMALLINT",
+  "INTEGER",
+  "BIGINT",
+  "DECIMAL",
+  "NUMERIC",
+  "REAL",
+  "DOUBLE PRECISION",
+  "SERIAL",
+  "BIGSERIAL",
+  "MONEY",
+  "VARCHAR",
+  "CHAR",
+  "TEXT",
+  "UUID",
+  "BOOLEAN",
+  "DATE",
+  "TIME",
+  "TIMESTAMP",
+  "TIMESTAMPTZ",
+  "INTERVAL",
+  "BYTEA",
+  "JSON",
+  "JSONB",
+  "INET",
+  "CIDR",
+  "MACADDR",
+  "BIT",
+  "VARBIT",
+  "TSVECTOR",
+  "TSQUERY",
+  "XML",
+  "ENUM",
+  "POINT"
+];
+
 Table pgTable(
   String name,
   Map<String, ColumnType> columns, {
@@ -165,7 +202,18 @@ Table pgTable(
 }) {
   final cols = columns.map((key, value) {
     final colName = value.columnName ?? key;
+    final typeMatch = RegExp(r'^([A-Z\s]+)').firstMatch(value.baseType);
+    final baseTypeName =
+        typeMatch != null ? typeMatch.group(1)!.trim() : value.baseType;
+
+    if (!value.isEnum && !supportedPostgresTypes.contains(baseTypeName)) {
+      throw Exception(
+        "O tipo de coluna '$baseTypeName' não é suportado pelo PostgreSQL.",
+      );
+    }
+
     return MapEntry(colName, value);
   });
+
   return Table(name, Map.from(cols), foreignKeys: foreignKeys);
 }

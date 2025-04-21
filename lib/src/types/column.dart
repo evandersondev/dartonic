@@ -8,9 +8,10 @@ class ColumnType {
   // For TEXT: 'string' (default), 'json'.
   final String? mode;
   final List<String> modifiers = [];
+  final bool isEnum;
 
   // Constructor accepts an optional mode.
-  ColumnType(this.baseType, [this.columnName, this.mode]);
+  ColumnType(this.baseType, [this.columnName, this.mode, this.isEnum = false]);
 
   ColumnType notNull() {
     modifiers.add("NOT NULL");
@@ -26,7 +27,7 @@ class ColumnType {
     if (autoIncrement) {
       modifiers.add("PRIMARY KEY AUTOINCREMENT");
     } else {
-      modifiers.add("PRIMARY KEY");
+      modifiers.add("PRIMARY KEY NOT NULL");
     }
     return this;
   }
@@ -63,8 +64,7 @@ class ColumnType {
 }
 
 // Exported column helper functions adapted from Drizzle syntax.
-ColumnType serial({String? columnName}) =>
-    ColumnType("SERIAL AUTO_INCREMENT", columnName);
+ColumnType serial({String? columnName}) => ColumnType("SERIAL", columnName);
 
 ColumnType varchar(
         {String? columnName, List<String>? enumerate, int length = 255}) =>
@@ -146,10 +146,53 @@ ColumnType datetime({String? columnName, int? fsp}) {
 }
 
 ColumnType time({String? columnName, int? fsp}) {
-  String typeStr = "DATETIME";
+  String typeStr = "TIME";
   if (fsp != null) {
     typeStr += "($fsp)";
   }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType interval({
+  String? columnName,
+  String?
+      fields, // microsecond, millisecond, second, minute, hour, day, week, month, year, decade, century, millennium
+  int? precision,
+}) {
+  String typeStr = "INTERVAL";
+
+  if (precision != null) {
+    typeStr += "($precision)";
+  }
+
+  if (fields != null) {
+    typeStr += " $fields";
+  }
+
+  return ColumnType(typeStr, columnName);
+}
+
+/// Creates a point column. The default mode is 'xy', which uses POINT.
+/// Use 'tuple' to store as a tuple of numbers.
+/// Use 'geography' to store as a geography point.
+///
+/// example:
+/// point: {'x': 1, 'y': 2} or tuple: [1, 2]
+ColumnType point({
+  String? columnName,
+  String mode = 'xy', // xy: {'x': 1, 'y': 2} or tuple: [1, 2]
+}) {
+  String typeStr = "POINT";
+
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType line({
+  String? columnName,
+  String mode = 'abc', // abc: { a: 1, b: 2, c: 3 } or tuple: [1, 2, 3]
+}) {
+  String typeStr = "LINE";
+
   return ColumnType(typeStr, columnName);
 }
 
@@ -166,8 +209,14 @@ ColumnType mysqlEnum(List<String> enumerate, {String? columnName, int? fsp}) =>
 
 /// Creates a timestamp column. The default mode is 'date', which uses DATETIME.
 /// Use 'string' to store as TEXT and 'number' to store as NUMERIC.
-ColumnType timestamp({String? columnName, String mode = 'date'}) {
+ColumnType timestamp({
+  String? columnName,
+  int? precision,
+  withTimezone = false,
+  String mode = 'timestamp', // 'string', 'number', 'date' or 'timestamp'
+}) {
   String base;
+
   switch (mode) {
     case 'string':
       base = 'TEXT';
@@ -176,12 +225,57 @@ ColumnType timestamp({String? columnName, String mode = 'date'}) {
       base = 'NUMERIC';
       break;
     case 'date':
-    default:
       base = 'DATETIME';
       break;
+    case 'timestamp':
+      base = 'TIMESTAMP';
+      break;
+    default:
+      base = 'TIMESTAMP';
+      break;
   }
+
+  if (precision != null) {
+    if (withTimezone) {
+      base += "($precision) WITH TIME ZONE";
+    } else {
+      base += "($precision)";
+    }
+  }
+
   return ColumnType(base, columnName);
 }
 
-/// Helper to inject raw SQL expressions.
 String sql(String value) => value;
+
+PgEnumDefinition pgEnum(String name, List<String> values) {
+  return PgEnumDefinition(name, values);
+}
+
+typedef PgEnumColumnBuilder = PgEnumColumn Function();
+
+class PgEnumDefinition {
+  final String name;
+  final List<String> values;
+  final PgEnumColumnBuilder builder;
+
+  PgEnumDefinition(this.name, this.values)
+      : builder = (() => PgEnumColumn(name));
+
+  PgEnumColumn call() => builder();
+
+  String dropSql() => 'DROP TYPE IF EXISTS $name;';
+  String toSql() =>
+      'CREATE TYPE $name AS ENUM (${values.map((v) => "'$v'").join(', ')});';
+}
+
+class PgEnumColumn extends ColumnType {
+  final String enumType;
+
+  PgEnumColumn(this.enumType) : super(enumType, null, null, true);
+
+  @override
+  String toString() {
+    return '$baseType${modifiers.contains("NOT NULL") ? ' NOT NULL' : ''}';
+  }
+}

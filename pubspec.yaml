@@ -11,6 +11,8 @@ dependencies:
   sqlite3: ^2.7.5
   mysql1: ^0.20.0
   postgres: ^3.5.4
+  darto: ^0.0.21
+  path: ^1.9.1
   # path: ^1.8.0
 
 dev_dependencies:

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dartonic Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl my-4">Dartonic Studio</h1>
+        <h2 class="text-2xl my-4">Tables</h2>
+        <div id="tables"></div>
+    </div>
+    <script>
+        async function fetchTables() {
+            const response = await fetch('/studio');
+            const data = await response.json();
+            const tablesDiv = document.getElementById('tables');
+            data.tables.forEach(table => {
+                const tableElement = document.createElement('div');
+                tableElement.innerHTML = `
+                    <h3 class="text-lg my-2">${table}</h3>
+                    <button onclick="fetchTableDetails('${table}')" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">View Details</button>
+                    <div id="${table}_details" class="mt-4"></div>
+                `;
+                tablesDiv.appendChild(tableElement);
+            });
+        }
+
+        async function fetchTableDetails(table) {
+            const response = await fetch(`/studio/${table}`);
+            const data = await response.json();
+            const detailsDiv = document.getElementById(`${table}_details`);
+            detailsDiv.innerHTML = JSON.stringify(data, null, 2);
+        }
+
+        fetchTables();
+    </script>
+</body>
+</html>

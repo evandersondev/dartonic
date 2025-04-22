@@ -66,9 +66,18 @@ class ColumnType {
 // Exported column helper functions adapted from Drizzle syntax.
 ColumnType serial({String? columnName}) => ColumnType("SERIAL", columnName);
 
+ColumnType smallserial({String? columnName}) =>
+    ColumnType("SMALLSERIAL", columnName);
+
+ColumnType bigserial({String? columnName}) =>
+    ColumnType("BIGSERIAL", columnName);
+
 ColumnType varchar(
         {String? columnName, List<String>? enumerate, int length = 255}) =>
     ColumnType("VARCHAR($length)", columnName);
+
+ColumnType char({String? columnName, int length = 256}) =>
+    ColumnType("CHAR($length)", columnName);
 
 // For INTEGER, mode defaults to 'number', but supports 'boolean' and 'timestamp'.
 ColumnType integer({String? columnName, String mode = 'number'}) =>
@@ -85,6 +94,7 @@ ColumnType uuid({String? columnName}) => ColumnType("UUID", columnName);
 
 ColumnType real({String? columnName, int? precision, int? scale}) {
   String typeStr = "REAL";
+
   if (precision != null) {
     typeStr += "($precision${scale != null ? ",$scale" : ""})";
   }
@@ -105,6 +115,16 @@ ColumnType mediumint({String? columnName}) =>
 
 ColumnType decimal({String? columnName, int? precision, int? scale}) {
   String typeStr = "DECIMAL";
+
+  if (precision != null) {
+    typeStr += "($precision${scale != null ? ",$scale" : ""})";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType numeric({String? columnName, int? precision, int? scale}) {
+  String typeStr = "NUMERIC";
+
   if (precision != null) {
     typeStr += "($precision${scale != null ? ",$scale" : ""})";
   }
@@ -113,8 +133,36 @@ ColumnType decimal({String? columnName, int? precision, int? scale}) {
 
 ColumnType $double({String? columnName, int? precision, int? scale}) {
   String typeStr = "DOUBLE";
+
   if (precision != null) {
     typeStr += "($precision${scale != null ? ",$scale" : ""})";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType doublePrecision({String? columnName, double? precision}) {
+  String typeStr = "DOUBLE PRECISION";
+
+  if (precision != null) {
+    typeStr += " $precision";
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType json({String? columnName, Map? map}) {
+  String typeStr = "JSON";
+
+  if (map != null) {
+    typeStr += '$map';
+  }
+  return ColumnType(typeStr, columnName);
+}
+
+ColumnType jsonb({String? columnName, Map? map}) {
+  String typeStr = "JSONB";
+
+  if (map != null) {
+    typeStr += '$map';
   }
   return ColumnType(typeStr, columnName);
 }
@@ -125,13 +173,12 @@ ColumnType binary({String? columnName}) => ColumnType("BINARY", columnName);
 
 ColumnType varbinary({String? columnName, int? length}) {
   String typeStr = "VARBINARY";
+
   if (length != null) {
     typeStr += "($length)";
   }
   return ColumnType(typeStr, columnName);
 }
-
-ColumnType char({String? columnName}) => ColumnType("CHAR", columnName);
 
 ColumnType boolean({String? columnName}) => ColumnType("BOOLEAN", columnName);
 
@@ -139,17 +186,23 @@ ColumnType date({String? columnName}) => ColumnType("DATE", columnName);
 
 ColumnType datetime({String? columnName, int? fsp}) {
   String typeStr = "DATETIME";
+
   if (fsp != null) {
     typeStr += "($fsp)";
   }
   return ColumnType(typeStr, columnName);
 }
 
-ColumnType time({String? columnName, int? fsp}) {
+ColumnType time({String? columnName, int? fsp, bool? withTimezone = false}) {
   String typeStr = "TIME";
   if (fsp != null) {
     typeStr += "($fsp)";
   }
+
+  if (withTimezone == true) {
+    typeStr += " WITH TIMEZONE";
+  }
+
   return ColumnType(typeStr, columnName);
 }
 

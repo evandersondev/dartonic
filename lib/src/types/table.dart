@@ -168,6 +168,7 @@ const List<String> supportedPostgresTypes = [
   "REAL",
   "DOUBLE PRECISION",
   "SERIAL",
+  "SMALLSERIAL",
   "BIGSERIAL",
   "MONEY",
   "VARCHAR",

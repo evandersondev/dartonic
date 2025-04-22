@@ -64,7 +64,7 @@ Add Dartonic to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dartonic: ^0.0.4
+  dartonic: ^0.0.5
 ```
 
 <br/>
@@ -112,7 +112,6 @@ Dartonic supports multiple databases through connection URIs:
 - **PostgreSQL:**
 
   ```dart
-  // Not Supported yet
   final dartonic = Dartonic("postgres://username:password@localhost:5432/database");
   ```
 
@@ -121,7 +120,6 @@ Dartonic supports multiple databases through connection URIs:
 - **MySQL:**
 
   ```dart
-  // Not Supported yet
   final dartonic = Dartonic("mysql://user:userpassword@localhost:3306/mydb");
   ```
 

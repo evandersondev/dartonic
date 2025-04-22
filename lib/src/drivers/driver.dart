@@ -23,7 +23,7 @@ class SqlDriverFactory {
       await driver.connect();
       return driver;
     } else if (uri.startsWith('postgres')) {
-      final driver = PostgresDriverImpl();
+      final driver = PostgresDriverImpl(uri, schemas);
       await driver.connect();
       return driver;
     }

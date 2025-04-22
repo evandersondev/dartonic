@@ -46,7 +46,7 @@ class ColumnType {
   }
 
   /// Define a default value using a raw SQL expression.
-  ColumnType defaultVal(dynamic value) {
+  ColumnType $default(dynamic value) {
     modifiers.add("DEFAULT $value");
     return this;
   }
@@ -63,7 +63,6 @@ class ColumnType {
   }
 }
 
-// Exported column helper functions adapted from Drizzle syntax.
 ColumnType serial({String? columnName}) => ColumnType("SERIAL", columnName);
 
 ColumnType smallserial({String? columnName}) =>

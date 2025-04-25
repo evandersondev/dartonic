@@ -4,17 +4,17 @@ import 'package:dartonic/dartonic.dart';
 void main() async {
   final app = Darto();
 
-  final usersSchemas = pgTable('users', {
-    'id': uuid().primaryKey(),
+  final usersSchemas = sqliteTable('users', {
+    'id': integer().primaryKey(autoIncrement: true),
     'name': text().notNull(),
-    'timestamp': timestamp(),
+    'is_active': integer(mode: 'boolean').$default(0),
   });
 
-  final dartonic = Dartonic(
-    "postgres://user:password@localhost:5432/mydb",
-    schemas: [usersSchemas],
-  );
+  final dartonic = Dartonic("sqlite::memory:", schemas: [usersSchemas]);
   final db = await dartonic.sync();
+
+  await db.insert('users').values({'name': 'John Doe'});
+  await db.update('users').set({'is_active': true});
 
   final users = await db.select().from('users');
   print(users);

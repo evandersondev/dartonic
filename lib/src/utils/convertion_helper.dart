@@ -8,11 +8,18 @@ dynamic convertValueForInsert(dynamic value, ColumnType columnType) {
     if (value is bool) {
       return value ? 1 : 0;
     }
+    if (value == null) {
+      return null;
+    }
   }
 
+  // Conversão de String para timestamp em campos INTEGER com mode "timestamp"
   if (columnType.baseType == "INTEGER" && columnType.mode == "timestamp") {
     if (value is String) {
       return DateTime.parse(value).millisecondsSinceEpoch;
+    }
+    if (value is DateTime) {
+      return value.millisecondsSinceEpoch;
     }
   }
 
@@ -21,7 +28,16 @@ dynamic convertValueForInsert(dynamic value, ColumnType columnType) {
     if (value is List || value is Map) {
       return jsonEncode(value);
     }
+    if (value is String) {
+      return value;
+    }
   }
+
+  // Conversão de REAL para double
+  if (columnType.baseType == "REAL") {
+    return convertReal(value);
+  }
+
   return value;
 }
 
@@ -32,26 +48,28 @@ dynamic convertValueForSelect(dynamic value, ColumnType colType) {
       return value == 1;
     }
   }
+
   // Converte de TEXT para JSON quando mode for "json"
   if (colType.baseType == "TEXT" && colType.mode == "json") {
     if (value is String) {
       try {
         return jsonDecode(value);
       } catch (_) {
-        return value;
+        return value; // Retorna o valor original se não for um JSON válido
       }
     }
   }
+
   // Converte de INTEGER para DateTime quando mode for "timestamp"
   if (colType.baseType == "INTEGER" && colType.mode == "timestamp") {
     if (value is int) {
-      return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true)
-          .toIso8601String();
+      return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
     }
   }
 
+  // Converte valores do tipo REAL para double
   if (colType.baseType == "REAL") {
-    return value;
+    return convertReal(value);
   }
 
   return value;
@@ -68,8 +86,8 @@ double convertReal(dynamic value) {
     final normalized = value.replaceAll(",", ".");
     final parsed = double.tryParse(normalized);
     if (parsed != null) return parsed;
-    return 0.0;
+    return 0.0; // Valor padrão para casos inválidos
   }
 
-  return 0.0;
+  return 0.0; // Valor padrão para tipos incompatíveis
 }

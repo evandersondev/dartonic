@@ -11,13 +11,27 @@ void main() async {
   });
 
   final dartonic = Dartonic("sqlite::memory:", schemas: [usersSchemas]);
-  final db = await dartonic.sync();
+  await dartonic.sync();
 
-  await db.insert('users').values({'name': 'John Doe'});
-  await db.update('users').set({'is_active': true});
+  final user = dartonic.table('users');
 
-  final users = await db.select().from('users');
+  await user.create({'name': 'John Doe'});
+  await user.create({'name': 'Jane Doe'});
+
+  await user.updateById(1, {'name': 'Evan Doe'});
+  final users = await user.findAll();
   print(users);
+
+  await user.updateById(1, {'is_active': true});
+
+  final evanUser = await user.findOne(eq('users.name', 'Evan Doe'));
+  print(evanUser);
+
+  // await db.insert('users').values({'name': 'John Doe'});
+  // await db.update('users').set({'is_active': true});
+
+  // final users = await db.select().from('users');
+  // print(users);
 
   app.listen(3000, () => print('Server is running on port 3000'));
 }

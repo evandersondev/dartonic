@@ -1,6 +1,7 @@
 import 'package:dartonic/src/drivers/raw_driver.dart';
 
 import 'drivers/driver.dart';
+import 'orm/orm_table.dart';
 import 'query_builder/database_facade.dart';
 import 'types/types.dart';
 
@@ -26,6 +27,10 @@ class Dartonic {
   RawDriver get driver => RawDriverWrapper(_driver);
   DatabaseFacade get instance => DatabaseFacade(_driver, _schemas);
   DatabaseFacade get I => DatabaseFacade(_driver, _schemas);
+
+  OrmTable table(String tableName) {
+    return OrmTable(tableName, DatabaseFacade(_driver, _schemas));
+  }
 
   Future<DatabaseFacade> sync() async {
     _driver = await SqlDriverFactory.getDriver(uri, _schemas);

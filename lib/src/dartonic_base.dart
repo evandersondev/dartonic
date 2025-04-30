@@ -1,12 +1,14 @@
+import 'package:dartonic/src/drivers/raw_driver.dart';
+
 import 'drivers/driver.dart';
 import 'query_builder/database_facade.dart';
 import 'types/types.dart';
 
-class Dartonic<T extends DatabaseDriver> {
+class Dartonic {
   static Dartonic? _instance;
   final String uri;
   final Map<String, TableSchema> _schemas;
-  late final T _driver;
+  late final DatabaseDriver _driver;
   final List<PgEnumDefinition> _enums;
 
   Dartonic._internal(this.uri, List<TableSchema> schemas, this._enums)
@@ -21,7 +23,7 @@ class Dartonic<T extends DatabaseDriver> {
     return _instance!;
   }
 
-  T get driver => _driver;
+  RawDriver get driver => RawDriverWrapper(_driver);
   DatabaseFacade get instance => DatabaseFacade(_driver, _schemas);
   DatabaseFacade get I => DatabaseFacade(_driver, _schemas);
 

@@ -8,21 +8,59 @@ class OrmTable {
 
   OrmTable(this.tableName, this.database);
 
-  // Método para buscar todos os registros
-  Future<List<Map<String, dynamic>>> findAll() async {
-    final results = await database.select().from(tableName);
+  Future<List<Map<String, dynamic>>> findAll({
+    List<String>? attributes,
+    Map<String, dynamic>? where,
+    int? offset,
+    int? limit,
+    List<List<String>>? order,
+  }) async {
+    dynamic selectAttributes;
+
+    if (attributes != null) {
+      selectAttributes = {
+        for (var attribute in attributes) attribute: attribute,
+      };
+    }
+
+    final query = database.select(selectAttributes).from(tableName);
+
+    if (where != null) {
+      where.forEach((column, value) {
+        if (value is List && value.length == 2) {
+          query.where(column, value[0].toString(), value[1]);
+        } else {
+          query.where(column, '=', value);
+        }
+      });
+    }
+
+    if (order != null) {
+      for (var column in order) {
+        if (column.length == 2) {
+          query.orderBy(column[0], column[1]);
+        } else {
+          throw ArgumentError(
+            'Invalid order format, must be [column, direction]',
+          );
+        }
+      }
+    }
+
+    if (offset != null) query.offset(offset);
+    if (limit != null) query.limit(limit);
+
+    final results = await query;
 
     return _convertToMapList(results);
   }
 
-  // Método para buscar um registro por ID
   Future<Map<String, dynamic>?> findById(dynamic id) async {
     final results = await database.select().from(tableName).where({'id': id});
 
     return results.isNotEmpty ? _convertToMapList(results).first : null;
   }
 
-  // FindOne
   Future<Map<String, dynamic>?> findOne(
     dynamic columnOrCondition, [
     String? operator,
@@ -35,18 +73,15 @@ class OrmTable {
     return results.isNotEmpty ? _convertToMapList(results).first : null;
   }
 
-  // Método para deletar um registro por ID
   Future<void> deleteById(dynamic id) async {
     return await database.delete(tableName).where(eq('$tableName.id', id));
   }
 
-  // Método para criar um registro
   Future<Map<String, dynamic>> create(Map<String, dynamic> values) async {
     final results = await database.insert(tableName).values(values).returning();
     return _convertToMapList(results).first;
   }
 
-  // Método para atualizar um registro por ID
   Future<Map<String, dynamic>> updateById(
       dynamic id, Map<String, dynamic> values) async {
     final results = await database

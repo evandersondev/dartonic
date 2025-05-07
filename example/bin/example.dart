@@ -16,7 +16,11 @@ void main() async {
   await db.insert('users').values({'name': 'John Doe'});
   await db.update('users').set({'is_active': true});
 
-  final users = await db.select().from('users');
+  // final users = await db.select().from('users');
+  // print(users);
+
+  final driver = dartonic.driver;
+  final users = await driver.raw('SELECT * FROM users');
   print(users);
 
   app.listen(3000, () => print('Server is running on port 3000'));

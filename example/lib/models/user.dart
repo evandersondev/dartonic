@@ -1,9 +1,7 @@
 import 'package:dartonic/dartonic.dart';
 
-final usersTable = sqliteTable('users', {
+final users = sqliteTable('users', {
   'id': integer().primaryKey(autoIncrement: true),
-  'name': text(columnName: 'fullname'),
-  'age': integer(columnName: 'birthday'),
-  'created_at': timestamp().notNull().defaultNow(),
-  'updated_at': timestamp().notNull().defaultNow(),
+  'name': text().notNull(),
+  'is_active': integer(mode: 'boolean').$default(0),
 });

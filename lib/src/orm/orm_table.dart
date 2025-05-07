@@ -1,6 +1,4 @@
-import 'package:dartonic/src/query_builder/condition.dart';
-
-import '../query_builder/database_facade.dart';
+import '../query_builder/builder.dart';
 
 class OrmTable {
   final String tableName;
@@ -8,41 +6,46 @@ class OrmTable {
 
   OrmTable(this.tableName, this.database);
 
-  Future<List<Map<String, dynamic>>> findAll({
-    List<String>? attributes,
-    Map<String, dynamic>? where,
+  Future<List<Map<String, dynamic>>> findMany({
+    Map<String, bool>? $with,
+    Map<String, bool>? includes,
+    Condition? where,
     int? offset,
     int? limit,
-    List<List<String>>? order,
+    List<String?>? orderBy,
   }) async {
     dynamic selectAttributes;
 
-    if (attributes != null) {
+    if ($with != null) {
       selectAttributes = {
-        for (var attribute in attributes) attribute: attribute,
+        for (var attribute in $with.entries)
+          if (attribute.value == true)
+            attribute.key: '$tableName.${attribute.key}'
       };
     }
 
     final query = database.select(selectAttributes).from(tableName);
 
-    if (where != null) {
-      where.forEach((column, value) {
-        if (value is List && value.length == 2) {
-          query.where(column, value[0].toString(), value[1]);
-        } else {
-          query.where(column, '=', value);
-        }
-      });
+    if (includes != null) {
+      for (var include in includes.entries) {
+        query.innerJoin(tableName, eq(include.key, 'includes.id'));
+      }
     }
 
-    if (order != null) {
-      for (var column in order) {
-        if (column.length == 2) {
-          query.orderBy(column[0], column[1]);
+    if (where != null) {
+      query.where(where);
+    }
+
+    if (orderBy != null) {
+      if (orderBy.isEmpty || orderBy.length > 2) {
+        throw ArgumentError(
+          'Invalid order format, must be [column, direction]',
+        );
+      } else {
+        if (orderBy.length == 1) {
+          query.orderBy('$tableName.${orderBy[0]!}', 'asc');
         } else {
-          throw ArgumentError(
-            'Invalid order format, must be [column, direction]',
-          );
+          query.orderBy('$tableName.${orderBy[0]!}', orderBy[1]!);
         }
       }
     }
@@ -55,42 +58,10 @@ class OrmTable {
     return _convertToMapList(results);
   }
 
-  Future<Map<String, dynamic>?> findById(dynamic id) async {
-    final results = await database.select().from(tableName).where({'id': id});
+  Future<Map<String, dynamic>?> findFirst() async {
+    final results = await database.select().from(tableName).limit(1);
 
     return results.isNotEmpty ? _convertToMapList(results).first : null;
-  }
-
-  Future<Map<String, dynamic>?> findOne(
-    dynamic columnOrCondition, [
-    String? operator,
-    dynamic value,
-  ]) async {
-    final results = await database
-        .select()
-        .from(tableName)
-        .where(columnOrCondition, operator, value);
-    return results.isNotEmpty ? _convertToMapList(results).first : null;
-  }
-
-  Future<void> deleteById(dynamic id) async {
-    return await database.delete(tableName).where(eq('$tableName.id', id));
-  }
-
-  Future<Map<String, dynamic>> create(Map<String, dynamic> values) async {
-    final results = await database.insert(tableName).values(values).returning();
-    return _convertToMapList(results).first;
-  }
-
-  Future<Map<String, dynamic>> updateById(
-      dynamic id, Map<String, dynamic> values) async {
-    final results = await database
-        .update(tableName)
-        .set(values)
-        .where(eq('$tableName.id', id))
-        .returning();
-
-    return _convertToMapList(results).first;
   }
 
   List<Map<String, dynamic>> _convertToMapList(List<dynamic> results) {

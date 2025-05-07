@@ -23,4 +23,8 @@ class DatabaseFacade {
   QueryBuilder delete(String table) {
     return QueryBuilder(_driver, _schemas)..delete(table);
   }
+
+  Query get query => Query();
 }
+
+class Query {}

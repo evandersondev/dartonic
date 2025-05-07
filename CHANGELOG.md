@@ -1,3 +1,7 @@
+## 0.0.8
+
+- Add raw method from driver.
+
 ## 0.0.7
 
 - Update convertion helper.

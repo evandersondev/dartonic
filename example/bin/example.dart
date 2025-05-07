@@ -31,5 +31,10 @@ void main() async {
   // final users = await db.select().from('users');
   // print(users);
 
+
+//   final driver = dartonic.driver;
+//   final users = await driver.raw('SELECT * FROM users');
+//   print(users);
+
   app.listen(3000, () => print('Server is running on port 3000'));
 }

@@ -1,3 +1,7 @@
+## 0.0.9
+
+- Add a methods like drizzle findMany and findFirst.
+
 ## 0.0.8
 
 - Add raw method from driver.

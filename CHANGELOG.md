@@ -1,3 +1,7 @@
+## 0.0.10
+
+- Fix returns list of empty maps/objects.
+
 ## 0.0.9
 
 - Add a methods like drizzle findMany and findFirst.

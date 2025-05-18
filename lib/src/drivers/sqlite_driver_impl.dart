@@ -116,6 +116,9 @@ class SqliteDriverImpl extends DatabaseDriver {
 
       final rows = result.map((row) {
         final nestedMap = row.toTableColumnMap();
+        if(nestedMap == null) {
+          return Map<String, dynamic>.from(row);
+        }
         final flattened = <String, dynamic>{};
         nestedMap?.forEach((_, colMap) {
           flattened.addAll(colMap);

@@ -19,6 +19,7 @@ class PostgresDriverImpl extends DatabaseDriver {
 
     final endpoint = Endpoint(
       host: parsedUri.host,
+      port: parsedUri.port,
       database: parsedUri.path.substring(1),
       username: username,
       password: password,
@@ -26,7 +27,13 @@ class PostgresDriverImpl extends DatabaseDriver {
 
     final conn = await Connection.open(
       endpoint,
-      settings: ConnectionSettings(sslMode: SslMode.disable),
+      settings: ConnectionSettings(
+        sslMode: switch (parsedUri.queryParameters['sslmode']) {
+          'require' => SslMode.require,
+          'verify-full' => SslMode.verifyFull,
+          _ => SslMode.disable,
+        },
+      ),
     );
 
     _connection = conn;

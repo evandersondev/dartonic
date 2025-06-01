@@ -112,7 +112,7 @@ Dartonic supports multiple databases through connection URIs:
 - **PostgreSQL:**
 
   ```dart
-  final dartonic = Dartonic("postgres://username:password@localhost:5432/database");
+  final dartonic = Dartonic("postgres://username:password@localhost:5432/postgres?sslmode=verify-full");
   ```
 
 <br/>

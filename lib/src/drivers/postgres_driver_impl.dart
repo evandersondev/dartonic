@@ -19,6 +19,7 @@ class PostgresDriverImpl extends DatabaseDriver {
 
     final endpoint = Endpoint(
       host: parsedUri.host,
+      port: parsedUri.port,
       database: parsedUri.path.substring(1),
       username: username,
       password: password,

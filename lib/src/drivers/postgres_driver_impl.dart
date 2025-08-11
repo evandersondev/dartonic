@@ -97,4 +97,19 @@ class PostgresDriverImpl extends DatabaseDriver {
       rethrow;
     }
   }
+
+  @override
+  Future<void> beginTransaction() async {
+    await raw('BEGIN', []);
+  }
+
+  @override
+  Future<void> commitTransaction() async {
+    await raw('COMMIT', []);
+  }
+
+  @override
+  Future<void> rollbackTransaction() async {
+    await raw('ROLLBACK', []);
+  }
 }

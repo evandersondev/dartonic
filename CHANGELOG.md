@@ -1,3 +1,7 @@
+## 0.0.11
+
+- Added transactions support.
+
 ## 0.0.10
 
 - Fix returns list of empty maps/objects.

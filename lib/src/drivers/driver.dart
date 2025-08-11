@@ -17,6 +17,9 @@ abstract class DatabaseDriver {
     String table,
     Map<String, String> columns,
   );
+  Future<void> beginTransaction();
+  Future<void> commitTransaction();
+  Future<void> rollbackTransaction();
 }
 
 class SqlDriverFactory {

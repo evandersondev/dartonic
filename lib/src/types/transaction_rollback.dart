@@ -1,0 +1,1 @@
+class TransactionRollback implements Exception {}

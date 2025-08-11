@@ -1,5 +1,6 @@
 import '../drivers/driver.dart';
 import '../types/table.dart';
+import '../types/transaction_rollback.dart';
 import 'query_builder.dart';
 
 class DatabaseFacade {
@@ -25,6 +26,25 @@ class DatabaseFacade {
   }
 
   Query get query => Query();
+
+  Future<void> transaction(
+      Future<void> Function(DatabaseFacade tx) callback) async {
+    await _driver.beginTransaction();
+    try {
+      final tx = DatabaseFacade(_driver, _schemas);
+      await callback(tx);
+      await _driver.commitTransaction();
+    } on TransactionRollback {
+      await _driver.rollbackTransaction();
+    } catch (e) {
+      await _driver.rollbackTransaction();
+      rethrow;
+    }
+  }
+
+  void rollback() {
+    throw TransactionRollback();
+  }
 }
 
 class Query {}

@@ -40,6 +40,7 @@ If you find Dartonic useful, please consider supporting its development 🌟[Buy
   - [DELETE](#delete-with-returning)
   - [Join Queries](#join-queries)
   - [Filter Conditions](#filter-conditions)
+  - [Transactions](#transactions)
 - [Limitations & Unsupported Types](#limitations--unsupported-types)
 - [Contributing](#contributing)
 - [License](#license)
@@ -64,7 +65,7 @@ Add Dartonic to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dartonic: ^0.0.10
+  dartonic: ^0.0.11
 ```
 
 <br/>
@@ -547,6 +548,37 @@ print(await orQuery);
 ```
 
 <br/>
+
+---
+
+### Transactions
+
+SQL transaction method dartonic support
+
+```dart
+final db = dartonic.instance;
+
+await db.transaction((tx) async {
+  final [account] = await db
+      .select()
+      .from('account')
+      .where(eq('users.name', 'Dan'));
+
+  if (account['balance'] < 100) {
+    tx.rollback();
+  }
+
+  await tx
+      .update('accounts')
+      .set({'balance': account['balance'] - 100.00})
+      .where(eq('users.name', 'Dan'));
+
+  await tx
+      .update('accounts')
+      .set({'balance': account['balance'] + 100.00})
+      .where(eq('users.name', 'Andrew'));
+});
+```
 
 ---
 

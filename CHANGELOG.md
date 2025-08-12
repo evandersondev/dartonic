@@ -1,3 +1,7 @@
+## 0.0.13
+
+- Change with clause from with\_ to with$.
+
 ## 0.0.12
 
 - Added view method and with clause.

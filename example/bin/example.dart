@@ -1,7 +1,6 @@
 import 'package:darto/darto.dart';
-import 'package:example/config/database.dart';
-
 import 'package:dartonic/dartonic.dart';
+import 'package:example/config/database.dart';
 
 void main() async {
   final app = Darto();
@@ -29,7 +28,7 @@ void main() async {
       );
 
   final result = await db
-      .with_(userPosts)
+      .with$(userPosts)
       .select({'name': 'users.name', 'post_count': 'user_posts.post_count'})
       .from('users')
       .innerJoin('user_posts', eq('users.id', 'user_posts.user_id'))

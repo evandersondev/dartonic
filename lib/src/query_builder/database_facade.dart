@@ -2,7 +2,6 @@ import '../drivers/driver.dart';
 import '../types/cte.dart';
 import '../types/table.dart';
 import '../types/transaction_rollback.dart';
-
 import 'query_builder.dart';
 
 class DatabaseFacade {
@@ -52,7 +51,7 @@ class DatabaseFacade {
     return CteBuilder(name);
   }
 
-  QueryBuilder with_(CommonTableExpression cte) {
+  QueryBuilder with$(CommonTableExpression cte) {
     return QueryBuilder(_driver, _schemas, cte);
   }
 }

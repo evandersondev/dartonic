@@ -41,6 +41,8 @@ If you find Dartonic useful, please consider supporting its development 🌟[Buy
   - [Join Queries](#join-queries)
   - [Filter Conditions](#filter-conditions)
   - [Transactions](#transactions)
+  - [Defining Views](#defining-views)
+  - [WITH Clause](#with-clause)
 - [Limitations & Unsupported Types](#limitations--unsupported-types)
 - [Contributing](#contributing)
 - [License](#license)
@@ -622,7 +624,7 @@ print(userCounts);
 
 <br/>
 
-# Common Table Expressions (WITH)
+# WITH Clause
 
 Common Table Expressions (CTEs), also known as the WITH clause, allow you to define a temporary, named table to be used within a single query. This is ideal for breaking complex queries into smaller, more readable parts.
 

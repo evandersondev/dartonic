@@ -4,6 +4,7 @@ import 'drivers/driver.dart';
 import 'orm/orm_table.dart';
 import 'query_builder/database_facade.dart';
 import 'types/types.dart';
+import 'types/view.dart';
 
 class Dartonic {
   static Dartonic? _instance;
@@ -11,16 +12,21 @@ class Dartonic {
   final Map<String, TableSchema> _schemas;
   late final DatabaseDriver _driver;
   final List<PgEnumDefinition> _enums;
+  final List<ViewSchema> _views;
+  final List<RelationsTable> _relations;
 
-  Dartonic._internal(this.uri, List<TableSchema> schemas, this._enums)
+  Dartonic._internal(this.uri, List<TableSchema> schemas, this._enums,
+      this._views, this._relations)
       : _schemas = {for (var schema in schemas) schema.name: schema};
 
   factory Dartonic(
     String uri, {
     required List<TableSchema> schemas,
     List<PgEnumDefinition> enums = const [],
+    List<ViewSchema> views = const [],
+    List<RelationsTable> relations = const [],
   }) {
-    _instance ??= Dartonic._internal(uri, schemas, enums);
+    _instance ??= Dartonic._internal(uri, schemas, enums, views, relations);
     return _instance!;
   }
 
@@ -49,6 +55,24 @@ class Dartonic {
       );
     }
 
-    return DatabaseFacade(_driver, _schemas);
+    for (final relation in _relations) {
+      await _driver.createTable(
+        relation.name,
+        relation.columns.map(
+          (field, col) => MapEntry(col.columnName ?? field, col.toString()),
+        ),
+      );
+    }
+
+    final dbFacade = DatabaseFacade(_driver, _schemas);
+    for (final view in _views) {
+      final qb = dbFacade.select();
+      final query = view.queryCallback(qb);
+      final sql =
+          'CREATE VIEW "${view.name}" AS ${query.toSql().trim().replaceAll(';', '')}';
+      await _driver.raw(sql, query.getParameters());
+    }
+
+    return dbFacade;
   }
 }

@@ -1,3 +1,7 @@
+## 0.0.12
+
+- Added view method and with clause.
+
 ## 0.0.11
 
 - Added transactions support.

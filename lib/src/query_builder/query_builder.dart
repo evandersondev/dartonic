@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import '../drivers/driver.dart';
+import '../types/cte.dart';
 import '../types/table.dart';
 import '../utils/convertion_helper.dart';
+
 import 'condition.dart';
 
 // Alterações feitas para manter o nome original da tabela para lookup em _schemas.
@@ -26,10 +28,11 @@ class QueryBuilder implements Future<dynamic> {
   final Map<String, TableSchema> _schemas;
   final List<String> _groupByClauses = [];
   final List<String> _havingClauses = [];
+  final CommonTableExpression? _cte;
 
   String? _returningClause;
 
-  QueryBuilder(this._driver, this._schemas);
+  QueryBuilder(this._driver, this._schemas, this._cte);
 
   String _escapeIdentifier(String identifier) {
     if (identifier.toLowerCase().contains('count')) {
@@ -54,7 +57,6 @@ class QueryBuilder implements Future<dynamic> {
     return this;
   }
 
-  // Armazena o nome original da tabela para lookup do schema.
   QueryBuilder from(String table) {
     _tableName = table;
     return this;
@@ -247,10 +249,17 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   String toSql() {
-    // Use _escapeIdentifier para obter o nome da tabela escapado.
     final tableEscaped = _escapeIdentifier(_tableName);
+    String sql = '';
+
+    if (_cte != null) {
+      final cteSql = _cte!.query.toSql().trim().replaceAll(';', '');
+      sql += 'WITH "${_cte!.name}" AS ($cteSql) ';
+    }
+
     if (_queryType == 'SELECT') {
-      String sql = "SELECT ${_columns.join(', ')} FROM $tableEscaped";
+      sql += "SELECT ${_columns.join(', ')} FROM $tableEscaped";
+
       if (_joinClauses.isNotEmpty) {
         sql += " ${_joinClauses.join(" ")}";
       }
@@ -320,7 +329,7 @@ class QueryBuilder implements Future<dynamic> {
     if (_alterTableCommands.isNotEmpty) {
       return "ALTER TABLE $tableEscaped ${_alterTableCommands.join(", ")};";
     }
-    throw Exception('Nenhuma operação definida!');
+    throw Exception('No operation was defined');
   }
 
   List<dynamic> getParameters() => _parameters;
@@ -331,7 +340,6 @@ class QueryBuilder implements Future<dynamic> {
     dynamic result;
     if (_queryType == 'SELECT' || _returningClause != null) {
       result = await _driver.execute(sql, params);
-      // Se for uma contagem, retorne apenas o valor numérico
       if (_queryType == 'SELECT' &&
           _columns.length == 1 &&
           _columns[0].toLowerCase().startsWith("count(") &&
@@ -346,7 +354,6 @@ class QueryBuilder implements Future<dynamic> {
         result = result.map((row) {
           if (row is Map<String, dynamic>) {
             row.forEach((key, value) {
-              // Usar o nome original da tabela para buscar o schema correto
               final colType = _schemas[_tableName]?.columns[key];
               if (colType != null) {
                 row[key] = convertValueForSelect(value, colType);

@@ -65,7 +65,7 @@ Add Dartonic to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dartonic: ^0.0.11
+  dartonic: ^0.0.12
 ```
 
 <br/>
@@ -583,6 +583,83 @@ await db.transaction((tx) async {
 ---
 
 <br/>
+
+<br/>
+
+## Defining Views
+
+Dartonic allows you to define and use views (virtual tables) to simplify complex queries and improve the organization of your code. Views are declared similarly to tables, using the pgView, sqliteView, or mysqlView helpers, and the as() method to define the underlying query.
+
+Syntax for defining a view:
+
+```dart
+import 'package:dartonic/dartonic.dart';
+
+final userPostCountsView = pgView('user_post_counts').as(
+  (qb) => qb
+    .select({
+      'user_id': 'posts.user_id',
+      'post_count': count('posts.id'),
+    })
+    .from('posts')
+    .groupBy(['posts.user_id']),
+);
+
+final dartonic = Dartonic(
+  "sqlite::memory:",
+  schemas: [users, posts],
+  views: [userPostCountsView],
+);
+
+// Use a view
+final userCounts = await db
+    .select()
+    .from(userPostCountsView.name)
+    .where(gt('post_count', 1));
+
+print(userCounts);
+```
+
+<br/>
+
+# Common Table Expressions (WITH)
+
+Common Table Expressions (CTEs), also known as the WITH clause, allow you to define a temporary, named table to be used within a single query. This is ideal for breaking complex queries into smaller, more readable parts.
+
+1. Defining the CTE:
+
+First, define the CTE using db.$with() and the .as() method, which accepts the query that defines it.
+
+```dart
+import 'package:dartonic/dartonic.dart';
+
+final userPostCounts = db.$with('user_post_counts').as(
+  db.select({
+    'user_id': 'posts.user_id',
+    'post_count': count('posts.id'),
+  }).from('posts').groupBy(['posts.user_id']),
+);
+```
+
+2. Using the CTE:
+
+To use the CTE in your main query, begin the method chain with db.with\_(), passing the CTE object you just created.
+
+> 🚨 Note: with is a reserved keyword in Dart. Therefore, we use with\_ to keep the syntax as close to Drizzle as possible.
+
+```dart
+final result = await db
+    .with_(userPostCounts)
+    .select({
+      'user_name': 'users.name',
+      'total_posts': 'user_post_counts.post_count',
+    })
+    .from('users')
+    .innerJoin('user_post_counts', eq('users.id', 'user_post_counts.user_id'))
+    .where(gt('user_post_counts.total_posts', 1));
+
+print(result);
+```
 
 ## Limitations & Unsupported Types
 

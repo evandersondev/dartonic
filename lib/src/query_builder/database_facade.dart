@@ -1,6 +1,8 @@
 import '../drivers/driver.dart';
+import '../types/cte.dart';
 import '../types/table.dart';
 import '../types/transaction_rollback.dart';
+
 import 'query_builder.dart';
 
 class DatabaseFacade {
@@ -10,19 +12,19 @@ class DatabaseFacade {
   DatabaseFacade(this._driver, this._schemas);
 
   QueryBuilder select([Map<String, String>? columns]) {
-    return QueryBuilder(_driver, _schemas)..select(columns);
+    return QueryBuilder(_driver, _schemas, null)..select(columns);
   }
 
   QueryBuilder insert(String table) {
-    return QueryBuilder(_driver, _schemas)..insert(table);
+    return QueryBuilder(_driver, _schemas, null)..insert(table);
   }
 
   QueryBuilder update(String table) {
-    return QueryBuilder(_driver, _schemas)..update(table);
+    return QueryBuilder(_driver, _schemas, null)..update(table);
   }
 
   QueryBuilder delete(String table) {
-    return QueryBuilder(_driver, _schemas)..delete(table);
+    return QueryBuilder(_driver, _schemas, null)..delete(table);
   }
 
   Query get query => Query();
@@ -44,6 +46,14 @@ class DatabaseFacade {
 
   void rollback() {
     throw TransactionRollback();
+  }
+
+  CteBuilder $with(String name) {
+    return CteBuilder(name);
+  }
+
+  QueryBuilder with_(CommonTableExpression cte) {
+    return QueryBuilder(_driver, _schemas, cte);
   }
 }
 

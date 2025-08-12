@@ -5,3 +5,7 @@ final users = sqliteTable('users', {
   'name': text().notNull(),
   'is_active': integer(mode: 'boolean').$default(0),
 });
+
+final usersView = sqliteView('user_john').as((qb) {
+  return qb.select().from('users').where(eq('users.name', 'John Doe'));
+});

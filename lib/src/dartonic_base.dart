@@ -31,14 +31,14 @@ class Dartonic {
   }
 
   RawDriver get driver => RawDriverWrapper(_driver);
-  DatabaseFacade get instance => DatabaseFacade(_driver, _schemas);
-  DatabaseFacade get I => DatabaseFacade(_driver, _schemas);
+  Database get instance => DatabaseFacade(_driver, _schemas);
+  Database get I => DatabaseFacade(_driver, _schemas);
 
   OrmTable table(String tableName) {
     return OrmTable(tableName, DatabaseFacade(_driver, _schemas));
   }
 
-  Future<DatabaseFacade> sync() async {
+  Future<Database> sync() async {
     _driver = await SqlDriverFactory.getDriver(uri, _schemas);
 
     for (final e in _enums) {

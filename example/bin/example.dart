@@ -1,6 +1,7 @@
 import 'package:darto/darto.dart';
-import 'package:dartonic/dartonic.dart';
 import 'package:example/config/database.dart';
+
+import 'package:dartonic/dartonic.dart';
 
 void main() async {
   final app = Darto();

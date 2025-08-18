@@ -24,3 +24,5 @@ final database = Dartonic(
   "postgres://postgres:postgres@localhost:5432/postgres",
   schemas: [users, posts],
 );
+
+Database db = database.instance;

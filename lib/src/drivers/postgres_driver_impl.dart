@@ -81,7 +81,7 @@ class PostgresDriverImpl extends DatabaseDriver {
       final schema = _schemas[table];
       final columnDefinitions = columns.entries
           .map((e) =>
-              "${e.key} ${e.value.replaceAll('AUTOINCREMENT', 'AUTO_INCREMENT')}")
+              "${e.key} ${e.value.replaceAll('AUTOINCREMENT', 'AUTO_INCREMENT').replaceAll('AUTOGENERATE', '')}")
           .toList();
 
       if (schema?.foreignKeys != null && schema!.foreignKeys.isNotEmpty) {

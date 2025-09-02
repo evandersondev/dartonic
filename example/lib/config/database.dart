@@ -10,19 +10,22 @@ import 'package:dartonic/dartonic.dart';
 //   OrmTable get users => dartonic.table('users');
 // }
 
-final users = pgTable('users', {'id': serial().primaryKey(), 'name': text()});
+final users = pgTable('users', {
+  'id': uuid().primaryKey(autoGenerate: true),
+  'name': text(),
+});
 
 // Tabela de posts
-final posts = pgTable('posts', {
-  'id': serial().primaryKey(),
-  'title': text(),
-  'user_id': integer().references(() => 'users.id'),
-});
+// final posts = pgTable('posts', {
+//   'id': serial().primaryKey(),
+//   'title': text(),
+//   'user_id': integer().references(() => 'users.id'),
+// });
 
 // Criando a instância do Dartonic
 final database = Dartonic(
   "postgres://postgres:postgres@localhost:5432/postgres",
-  schemas: [users, posts],
+  schemas: [users],
 );
 
 Database db = database.instance;

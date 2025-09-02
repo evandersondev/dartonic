@@ -23,12 +23,33 @@ class ColumnType {
     return this;
   }
 
-  ColumnType primaryKey({bool autoIncrement = false}) {
-    if (autoIncrement) {
-      modifiers.add("PRIMARY KEY AUTOINCREMENT");
-    } else {
-      modifiers.add("PRIMARY KEY NOT NULL");
+  // ColumnType primaryKey({bool autoIncrement = false}) {
+  //   if (autoIncrement) {
+  //     modifiers.add("PRIMARY KEY AUTOINCREMENT");
+  //   } else {
+  //     modifiers.add("PRIMARY KEY NOT NULL");
+  //   }
+  //   return this;
+  // }
+  ColumnType primaryKey(
+      {bool autoIncrement = false, bool autoGenerate = false}) {
+    if (autoIncrement && autoGenerate) {
+      throw ArgumentError(
+          'autoIncrement and autoGenerate cannot be used together');
     }
+
+    if (autoGenerate && baseType != 'UUID') {
+      throw ArgumentError('autoGenerate can only be used with uuid type');
+    }
+
+    if (autoIncrement) {
+      modifiers.add('PRIMARY KEY AUTOINCREMENT');
+    } else if (autoGenerate) {
+      modifiers.add('PRIMARY KEY AUTOGENERATE');
+    } else {
+      modifiers.add('PRIMARY KEY');
+    }
+
     return this;
   }
 

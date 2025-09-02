@@ -1,10 +1,11 @@
 import 'dart:async';
 
+import 'package:uuid/uuid.dart';
+
 import '../drivers/driver.dart';
 import '../types/cte.dart';
 import '../types/table.dart';
 import '../utils/convertion_helper.dart';
-
 import 'condition.dart';
 
 // Alterações feitas para manter o nome original da tabela para lookup em _schemas.
@@ -161,10 +162,38 @@ class QueryBuilder implements Future<dynamic> {
     return this;
   }
 
+  // QueryBuilder values(Map<String, dynamic> data) {
+  //   _parameters.clear();
+  //   final tableSchema = _schemas[_tableName];
+  //   _insertData = {};
+  //   data.forEach((key, value) {
+  //     if (tableSchema != null && tableSchema.columns.containsKey(key)) {
+  //       final colType = tableSchema.columns[key]!;
+  //       _insertData[key] = convertValueForInsert(value, colType);
+  //     } else {
+  //       _insertData[key] = value;
+  //     }
+  //   });
+  //   _parameters.addAll(_insertData.values);
+  //   return this;
+  // }
   QueryBuilder values(Map<String, dynamic> data) {
     _parameters.clear();
     final tableSchema = _schemas[_tableName];
     _insertData = {};
+
+    // First, process auto-generated UUIDs for primary keys
+    if (tableSchema != null) {
+      tableSchema.columns.forEach((key, column) {
+        if (column.baseType == 'UUID' &&
+            column.modifiers.contains('PRIMARY KEY AUTOGENERATE') &&
+            !data.containsKey(key)) {
+          data[key] = Uuid().v4();
+        }
+      });
+    }
+
+    // Then process all data including the auto-generated values
     data.forEach((key, value) {
       if (tableSchema != null && tableSchema.columns.containsKey(key)) {
         final colType = tableSchema.columns[key]!;
@@ -173,6 +202,7 @@ class QueryBuilder implements Future<dynamic> {
         _insertData[key] = value;
       }
     });
+
     _parameters.addAll(_insertData.values);
     return this;
   }

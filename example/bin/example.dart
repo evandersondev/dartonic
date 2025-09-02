@@ -1,8 +1,6 @@
 import 'package:darto/darto.dart';
 import 'package:example/config/database.dart';
 
-import 'package:dartonic/dartonic.dart';
-
 void main() async {
   final app = Darto();
 
@@ -12,31 +10,31 @@ void main() async {
   await db.insert(users.name).values({'name': 'Bob'});
   await db.insert(users.name).values({'name': 'Charlie'});
 
-  await db.insert(posts.name).values({'title': 'Post 1', 'user_id': 1});
-  await db.insert(posts.name).values({'title': 'Post 2', 'user_id': 1});
-  await db.insert(posts.name).values({'title': 'Post 3', 'user_id': 2});
+  // await db.insert(posts.name).values({'title': 'Post 1', 'user_id': 1});
+  // await db.insert(posts.name).values({'title': 'Post 2', 'user_id': 1});
+  // await db.insert(posts.name).values({'title': 'Post 3', 'user_id': 2});
 
-  final userPosts = db
-      .$with('user_posts')
-      .as(
-        db
-            .select({
-              'user_id': 'posts.user_id',
-              'post_count': count('posts.id', distinct: true),
-            })
-            .from('posts')
-            .groupBy(['posts.user_id']),
-      );
+  // final userPosts = db
+  //     .$with('user_posts')
+  //     .as(
+  //       db
+  //           .select({
+  //             'user_id': 'posts.user_id',
+  //             'post_count': count('posts.id', distinct: true),
+  //           })
+  //           .from('posts')
+  //           .groupBy(['posts.user_id']),
+  //     );
 
-  final result = await db
-      .with$(userPosts)
-      .select({'name': 'users.name', 'post_count': 'user_posts.post_count'})
-      .from('users')
-      .innerJoin('user_posts', eq('users.id', 'user_posts.user_id'))
-      .where(gt('user_posts.post_count', 1));
+  // final result = await db
+  //     .with$(userPosts)
+  //     .select({'name': 'users.name', 'post_count': 'user_posts.post_count'})
+  //     .from('users')
+  //     .innerJoin('user_posts', eq('users.id', 'user_posts.user_id'))
+  //     .where(gt('user_posts.post_count', 1));
 
-  print('Usuários com mais de 1 post:');
-  print(result);
+  // print('Usuários com mais de 1 post:');
+  // print(result);
 
   // await db.insert('users').values({'name': 'John Doe'});
   // await db.insert('users').values({'name': 'Jane Doe'});
@@ -45,8 +43,8 @@ void main() async {
   // await db.insert('users').values({'name': 'Cyfer Doe'});
   // await db.update('users').set({'is_active': true});
 
-  // final result = await db.query.users.findFirst();
-  // print(result);
+  final result = await db.select().from('users');
+  print(result);
 
   // await changeNamesWithRollback();
 

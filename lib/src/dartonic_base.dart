@@ -3,6 +3,7 @@ import 'package:dartonic/src/drivers/raw_driver.dart';
 import 'drivers/driver.dart';
 import 'orm/orm_table.dart';
 import 'query_builder/database_facade.dart';
+import 'types/database_error.dart';
 import 'types/types.dart';
 import 'types/view.dart';
 
@@ -39,40 +40,63 @@ class Dartonic {
   }
 
   Future<Database> sync() async {
-    _driver = await SqlDriverFactory.getDriver(uri, _schemas);
+    try {
+      _driver = await SqlDriverFactory.getDriver(uri, _schemas);
 
-    for (final e in _enums) {
-      await _driver.execute(e.dropSql());
-      await _driver.execute(e.toSql());
+      for (final e in _enums) {
+        try {
+          await _driver.execute(e.dropSql());
+          await _driver.execute(e.toSql());
+        } catch (e) {
+          throw ExecutionError('Failed to create enum $e', e);
+        }
+      }
+
+      for (final schema in _schemas.values) {
+        try {
+          await _driver.createTable(
+            schema.name,
+            schema.columns.map(
+              (field, col) => MapEntry(col.columnName ?? field, col.toString()),
+            ),
+          );
+        } catch (e) {
+          throw ExecutionError('Failed to create table ${schema.name}', e);
+        }
+      }
+
+      for (final relation in _relations) {
+        try {
+          await _driver.createTable(
+            relation.name,
+            relation.columns.map(
+              (field, col) => MapEntry(col.columnName ?? field, col.toString()),
+            ),
+          );
+        } catch (e) {
+          throw ExecutionError(
+              'Failed to create relation table ${relation.name}', e);
+        }
+      }
+
+      final dbFacade = DatabaseFacade(_driver, _schemas);
+
+      for (final view in _views) {
+        try {
+          final qb = dbFacade.select();
+          final query = view.queryCallback(qb);
+          final sql =
+              'CREATE VIEW "${view.name}" AS ${query.toSql().trim().replaceAll(';', '')}';
+          await _driver.raw(sql, query.getParameters());
+        } catch (e) {
+          throw ExecutionError('Failed to create view ${view.name}', e);
+        }
+      }
+
+      return dbFacade;
+    } catch (e) {
+      if (e is DatabaseError) rethrow;
+      throw ConnectionError('Failed to initialize database', e);
     }
-
-    for (final schema in _schemas.values) {
-      await _driver.createTable(
-        schema.name,
-        schema.columns.map(
-          (field, col) => MapEntry(col.columnName ?? field, col.toString()),
-        ),
-      );
-    }
-
-    for (final relation in _relations) {
-      await _driver.createTable(
-        relation.name,
-        relation.columns.map(
-          (field, col) => MapEntry(col.columnName ?? field, col.toString()),
-        ),
-      );
-    }
-
-    final dbFacade = DatabaseFacade(_driver, _schemas);
-    for (final view in _views) {
-      final qb = dbFacade.select();
-      final query = view.queryCallback(qb);
-      final sql =
-          'CREATE VIEW "${view.name}" AS ${query.toSql().trim().replaceAll(';', '')}';
-      await _driver.raw(sql, query.getParameters());
-    }
-
-    return dbFacade;
   }
 }

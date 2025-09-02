@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dartonic/src/query_builder/query_builder.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import '../types/database_error.dart';
 import '../types/table.dart';
 import 'driver.dart';
 
@@ -15,23 +16,28 @@ class SqliteDriverImpl extends DatabaseDriver {
 
   @override
   Future<void> connect() async {
-    if (uri == 'sqlite::memory:') {
-      _connection = sqlite3.openInMemory();
-    } else if (uri.startsWith("sqlite:")) {
-      final filePath = uri.replaceFirst("sqlite:", "");
-      final file = File(filePath);
-      final directory = file.parent;
+    try {
+      if (uri == 'sqlite::memory:') {
+        _connection = sqlite3.openInMemory();
+      } else if (uri.startsWith("sqlite:")) {
+        final filePath = uri.replaceFirst("sqlite:", "");
+        final file = File(filePath);
+        final directory = file.parent;
 
-      if (!directory.existsSync()) {
-        directory.createSync(recursive: true);
+        if (!directory.existsSync()) {
+          directory.createSync(recursive: true);
+        }
+
+        _connection = sqlite3.open(filePath);
+      } else {
+        throw ValidationError("Unsupported SQLite URI scheme");
       }
 
-      _connection = sqlite3.open(filePath);
-    } else {
-      throw Exception("Unsupported URI scheme");
+      _connection.execute('PRAGMA foreign_keys = ON;');
+    } catch (e) {
+      if (e is ValidationError) rethrow;
+      throw ConnectionError('Failed to connect to SQLite database', e);
     }
-
-    _connection.execute('PRAGMA foreign_keys = ON;');
   }
 
   @override
@@ -128,7 +134,7 @@ class SqliteDriverImpl extends DatabaseDriver {
 
       return Future.value(rows);
     } catch (e) {
-      rethrow;
+      throw ExecutionError('Failed to execute SQLite query', e);
     }
   }
 

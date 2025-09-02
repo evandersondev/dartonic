@@ -1,6 +1,7 @@
 import 'package:postgres/postgres.dart';
 
 import '../query_builder/query_builder.dart';
+import '../types/database_error.dart';
 import '../types/types.dart';
 import 'driver.dart';
 
@@ -14,30 +15,34 @@ class PostgresDriverImpl extends DatabaseDriver {
 
   @override
   Future<void> connect() async {
-    final parsedUri = Uri.parse(uri);
-    final username = parsedUri.userInfo.split(':').first;
-    final password = parsedUri.userInfo.split(':').last;
+    try {
+      final parsedUri = Uri.parse(uri);
+      final username = parsedUri.userInfo.split(':').first;
+      final password = parsedUri.userInfo.split(':').last;
 
-    final endpoint = Endpoint(
-      host: parsedUri.host,
-      port: parsedUri.port,
-      database: parsedUri.path.substring(1),
-      username: username,
-      password: password,
-    );
+      final endpoint = Endpoint(
+        host: parsedUri.host,
+        port: parsedUri.port,
+        database: parsedUri.path.substring(1),
+        username: username,
+        password: password,
+      );
 
-    final conn = await Connection.open(
-      endpoint,
-      settings: ConnectionSettings(
-        sslMode: switch (parsedUri.queryParameters['sslmode']) {
-          'require' => SslMode.require,
-          'verify-full' => SslMode.verifyFull,
-          _ => SslMode.disable,
-        },
-      ),
-    );
+      final conn = await Connection.open(
+        endpoint,
+        settings: ConnectionSettings(
+          sslMode: switch (parsedUri.queryParameters['sslmode']) {
+            'require' => SslMode.require,
+            'verify-full' => SslMode.verifyFull,
+            _ => SslMode.disable,
+          },
+        ),
+      );
 
-    _connection = conn;
+      _connection = conn;
+    } catch (e) {
+      throw ConnectionError('Failed to connect to PostgreSQL database', e);
+    }
   }
 
   @override
@@ -57,22 +62,26 @@ class PostgresDriverImpl extends DatabaseDriver {
 
   @override
   Future<QueryResult> execute(String query, [List<dynamic>? parameters]) async {
-    Result result;
+    try {
+      Result result;
 
-    if (parameters == null) {
-      result = await _connection.execute(query);
-    } else {
-      String sqlRaw = query;
+      if (parameters == null) {
+        result = await _connection.execute(query);
+      } else {
+        String sqlRaw = query;
 
-      for (var i = 1; i <= parameters.length; i++) {
-        sqlRaw = sqlRaw.replaceFirst('?', '\$$i');
+        for (var i = 1; i <= parameters.length; i++) {
+          sqlRaw = sqlRaw.replaceFirst('?', '\$$i');
+        }
+
+        result = await _connection.execute(sqlRaw, parameters: parameters);
       }
 
-      result = await _connection.execute(sqlRaw, parameters: parameters);
+      final rows = result.map((row) => row.toColumnMap()).toList();
+      return rows;
+    } catch (e) {
+      throw ExecutionError('Failed to execute PostgreSQL query', e);
     }
-
-    final rows = result.map((row) => row.toColumnMap()).toList();
-    return rows;
   }
 
   @override

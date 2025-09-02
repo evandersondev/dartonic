@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../drivers/driver.dart';
 import '../types/cte.dart';
+import '../types/database_error.dart';
 import '../types/table.dart';
 import '../utils/convertion_helper.dart';
 import 'condition.dart';
@@ -181,6 +182,14 @@ class QueryBuilder implements Future<QueryResult> {
   //   return this;
   // }
   QueryBuilder values(Map<String, dynamic> data) {
+    if (data.isEmpty) {
+      throw ValidationError('Data cannot be empty');
+    }
+
+    if (_queryType != 'INSERT') {
+      throw QueryBuildError('Values can only be used with INSERT operations');
+    }
+
     _parameters.clear();
     final tableSchema = _schemas[_tableName];
     _insertData = {};
@@ -368,67 +377,77 @@ class QueryBuilder implements Future<QueryResult> {
   List<dynamic> getParameters() => _parameters;
 
   Future<QueryResult> _internalExecute() async {
-    final sql = toSql();
-    final params = getParameters();
-
-    if (_queryType == 'SELECT') {
-      final result = await _driver.execute(sql, params);
-
-      if (_columns.length == 1 &&
-          _columns[0].toLowerCase().startsWith("count(")) {
-        // Handle COUNT specially
-        final count = (result as List).first as Map;
-        return [
-          {'count': count.values.first}
-        ];
+    try {
+      if (_tableName.isEmpty && _queryType != 'CREATE_TABLE') {
+        throw QueryBuildError('Table name is required');
       }
 
-      return (result as List).map((row) {
-        if (row is Map<String, dynamic>) {
-          row.forEach((key, value) {
-            final colType = _schemas[_tableName]?.columns[key];
-            if (colType != null) {
-              row[key] = convertValueForSelect(value, colType);
+      final sql = toSql();
+      final params = getParameters();
+
+      if (_queryType == 'SELECT') {
+        try {
+          final result = await _driver.execute(sql, params);
+
+          if (_columns.length == 1 &&
+              _columns[0].toLowerCase().startsWith("count(")) {
+            final count = (result as List).first as Map;
+            return [
+              {'count': count.values.first}
+            ];
+          }
+
+          return (result as List).map((row) {
+            if (row is! Map<String, dynamic>) {
+              throw ExecutionError('Invalid row format received from database');
             }
-          });
+
+            row.forEach((key, value) {
+              final colType = _schemas[_tableName]?.columns[key];
+              if (colType != null) {
+                try {
+                  row[key] = convertValueForSelect(value, colType);
+                } catch (e) {
+                  throw ExecutionError(
+                      'Failed to convert value for column $key', e);
+                }
+              }
+            });
+            return row;
+          }).toList();
+        } catch (e) {
+          if (e is DatabaseError) rethrow;
+          throw ExecutionError('Failed to execute SELECT query', e);
         }
-        return row as Map<String, dynamic>;
-      }).toList();
-    }
-
-    if (_queryType == 'INSERT' ||
-        _queryType == 'UPDATE' ||
-        _queryType == 'DELETE') {
-      if (_returningClause != null) {
-        final result = await _driver.execute(sql, params);
-        return result;
       }
-      await _driver.raw(sql, params);
-      return [];
+
+      // Tratamento para INSERT/UPDATE/DELETE
+      if (_queryType == 'INSERT' ||
+          _queryType == 'UPDATE' ||
+          _queryType == 'DELETE') {
+        try {
+          if (_returningClause != null) {
+            final result = await _driver.execute(sql, params);
+            return result;
+          }
+          await _driver.raw(sql, params);
+          return [];
+        } catch (e) {
+          throw ExecutionError('Failed to execute $_queryType operation', e);
+        }
+      }
+
+      // Outros tipos de queries
+      try {
+        await _driver.raw(sql, params);
+        return [];
+      } catch (e) {
+        throw ExecutionError('Failed to execute query', e);
+      }
+    } catch (e) {
+      if (e is DatabaseError) rethrow;
+      throw QueryBuildError('Unexpected error during query execution', e);
     }
-
-    await _driver.raw(sql, params);
-    return [];
-  }
-
-  void _reset() {
-    _tableName = '';
-    _columns = ['*'];
-    _whereClauses.clear();
-    _orderByClauses.clear();
-    _joinClauses.clear();
-    _unionQueries.clear();
-    _limit = null;
-    _offset = null;
-    _insertData.clear();
-    _updateData.clear();
-    _queryType = null;
-    _parameters.clear();
-    _createTableSQL = null;
-    _alterTableCommands.clear();
-    _returningClause = null;
-    _groupByClauses.clear();
-    _havingClauses.clear();
   }
 
   @override

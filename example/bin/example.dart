@@ -11,18 +11,22 @@ void main() async {
   // await db.insert(users.name).values({'name': 'Bob'});
   // await db.insert(users.name).values({'name': 'Charlie'});
 
-  // await db.insert(posts.name).values({
-  //   'title': 'Post 1',
-  //   'user_id': '6b679776-de78-489b-b021-a26c9821d8c1',
-  // });
-  // await db.insert(posts.name).values({
-  //   'title': 'Post 2',
-  //   'user_id': '6b679776-de78-489b-b021-a26c9821d8c1',
-  // });
-  // await db.insert(posts.name).values({
-  //   'title': 'Post 3',
-  //   'user_id': 'c89471e6-08f0-4fc5-a668-9771fb334b92',
-  // });
+  await db.insert(posts.name).values({
+    'title': 'Post 1',
+    'user_id': '89673577-2639-4216-b24a-583ea3c6ae1c',
+  });
+  await db.insert(posts.name).values({
+    'title': 'Post 2',
+    'user_id': '89673577-2639-4216-b24a-583ea3c6ae1c',
+  });
+  await db.insert(posts.name).values({
+    'title': 'Post 3',
+    'user_id': '1b04a0e6-6559-4e0c-8ca1-f46358329aa3',
+  });
+  await db.insert(posts.name).values({
+    'title': 'Post 4',
+    'user_id': '6db477fc-94d2-4516-8d30-f2a939a8b329',
+  });
 
   // final userPosts = db
   //     .$with('user_posts')
@@ -66,6 +70,8 @@ void main() async {
       .from('posts')
       .innerJoin('users', eq('users.id', 'posts.user_id'));
   print(result);
+  // final result = await db.select().from(posts.name);
+  // print(result);
 
   // await changeNamesWithRollback();
 

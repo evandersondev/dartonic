@@ -1,5 +1,7 @@
 import 'dart:core';
 
+import 'database_error.dart';
+
 class ColumnType {
   final String? columnName;
   final String baseType;
@@ -14,11 +16,17 @@ class ColumnType {
   ColumnType(this.baseType, [this.columnName, this.mode, this.isEnum = false]);
 
   ColumnType notNull() {
+    if (modifiers.contains('NULL')) {
+      throw TypeValidationError('Column cannot be both NULL and NOT NULL');
+    }
     modifiers.add("NOT NULL");
     return this;
   }
 
   ColumnType unique() {
+    if (modifiers.contains('UNIQUE')) {
+      throw TypeValidationError('Column is already unique');
+    }
     modifiers.add("UNIQUE");
     return this;
   }
@@ -34,12 +42,16 @@ class ColumnType {
   ColumnType primaryKey(
       {bool autoIncrement = false, bool autoGenerate = false}) {
     if (autoIncrement && autoGenerate) {
-      throw ArgumentError(
+      throw TypeValidationError(
           'autoIncrement and autoGenerate cannot be used together');
     }
 
+    if (modifiers.contains('PRIMARY KEY')) {
+      throw TypeValidationError('Column is already a primary key');
+    }
+
     if (autoGenerate && baseType != 'UUID') {
-      throw ArgumentError('autoGenerate can only be used with uuid type');
+      throw TypeValidationError('autoGenerate can only be used with uuid type');
     }
 
     if (autoIncrement) {

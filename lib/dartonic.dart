@@ -6,5 +6,6 @@ export 'src/orm/orm.dart';
 export 'src/query_builder/builder.dart';
 export 'src/query_builder/database_facade.dart' hide DatabaseFacade;
 export 'src/types/cte.dart';
+export 'src/types/database_error.dart';
 export 'src/types/types.dart';
 export 'src/types/view.dart';

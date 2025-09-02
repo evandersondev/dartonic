@@ -1,5 +1,7 @@
 import 'package:dartonic/src/drivers/driver.dart';
 
+import '../types/database_error.dart';
+
 abstract class RawDriver {
   Future<List<Map<String, dynamic>>> raw(String query,
       [List<dynamic>? parameters]);
@@ -13,6 +15,10 @@ class RawDriverWrapper implements RawDriver {
   @override
   Future<List<Map<String, dynamic>>> raw(String query,
       [List<dynamic>? parameters]) async {
-    return await _driver.execute(query, parameters);
+    try {
+      return await _driver.execute(query, parameters);
+    } catch (e) {
+      throw ExecutionError('Failed to execute raw query', e);
+    }
   }
 }

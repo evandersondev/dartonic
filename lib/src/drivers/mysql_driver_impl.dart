@@ -1,6 +1,7 @@
 import 'package:dartonic/src/query_builder/query_builder.dart';
 import 'package:mysql1/mysql1.dart' as mysql;
 
+import '../types/database_error.dart';
 import '../types/table.dart';
 import 'driver.dart';
 
@@ -14,20 +15,24 @@ class MysqlDriverImpl extends DatabaseDriver {
 
   @override
   Future<void> connect() async {
-    final parsedUri = Uri.parse(uri);
-    final username = parsedUri.userInfo.split(':').first;
-    final password = parsedUri.userInfo.split(':').last;
+    try {
+      final parsedUri = Uri.parse(uri);
+      final username = parsedUri.userInfo.split(':').first;
+      final password = parsedUri.userInfo.split(':').last;
 
-    final settings = mysql.ConnectionSettings(
-      host: parsedUri.host,
-      port: parsedUri.port,
-      user: username,
-      password: password,
-      db: parsedUri.path.substring(1),
-    );
+      final settings = mysql.ConnectionSettings(
+        host: parsedUri.host,
+        port: parsedUri.port,
+        user: username,
+        password: password,
+        db: parsedUri.path.substring(1),
+      );
 
-    _connection = await mysql.MySqlConnection.connect(settings);
-    await Future.delayed(Duration(seconds: 1));
+      _connection = await mysql.MySqlConnection.connect(settings);
+      await Future.delayed(Duration(seconds: 1));
+    } catch (e) {
+      throw ConnectionError('Failed to connect to MySQL database', e);
+    }
   }
 
   @override
@@ -41,11 +46,15 @@ class MysqlDriverImpl extends DatabaseDriver {
 
   @override
   Future<QueryResult> execute(String query, [List<dynamic>? parameters]) async {
-    final result = parameters == null
-        ? await _connection.query(query)
-        : await _connection.query(query, parameters);
-    final rows = result.map((row) => row.fields).toList();
-    return rows;
+    try {
+      final result = parameters == null
+          ? await _connection.query(query)
+          : await _connection.query(query, parameters);
+      final rows = result.map((row) => row.fields).toList();
+      return rows;
+    } catch (e) {
+      throw ExecutionError('Failed to execute MySQL query', e);
+    }
   }
 
   @override

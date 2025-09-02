@@ -1,4 +1,5 @@
 import 'column.dart';
+import 'database_error.dart';
 
 /// Tipos de ações para foreign keys
 enum ReferentialAction {
@@ -26,20 +27,24 @@ class ForeignKey {
   });
 
   String toSql() {
-    final constraints = [
-      'FOREIGN KEY ($column)',
-      'REFERENCES $references($referencesColumn)',
-    ];
+    try {
+      final constraints = [
+        'FOREIGN KEY ($column)',
+        'REFERENCES $references($referencesColumn)',
+      ];
 
-    if (onDelete != null) {
-      constraints.add('ON DELETE ${_actionToSql(onDelete!)}');
+      if (onDelete != null) {
+        constraints.add('ON DELETE ${_actionToSql(onDelete!)}');
+      }
+
+      if (onUpdate != null) {
+        constraints.add('ON UPDATE ${_actionToSql(onUpdate!)}');
+      }
+
+      return constraints.join(' ');
+    } catch (e) {
+      throw ForeignKeyError('Failed to generate foreign key SQL', e);
     }
-
-    if (onUpdate != null) {
-      constraints.add('ON UPDATE ${_actionToSql(onUpdate!)}');
-    }
-
-    return constraints.join(' ');
   }
 
   String _actionToSql(ReferentialAction action) {
@@ -128,8 +133,8 @@ Table mysqlTable(
         typeMatch != null ? typeMatch.group(1)! : value.baseType;
 
     if (!supportedMySQLTypes.contains(baseTypeName)) {
-      throw Exception(
-        "O tipo de coluna '$baseTypeName' não é suportado pelo MySQL.",
+      throw TypeValidationError(
+        "The column type '$baseTypeName' is not supported by MySQL.",
       );
     }
     return MapEntry(colName, value);
@@ -147,8 +152,8 @@ Table sqliteTable(
     final colName = value.columnName ?? key;
 
     if (!supportedSqliteTypes.contains(value.baseType)) {
-      throw Exception(
-        "O tipo de coluna '${value.baseType}' não é suportado pelo SQLite.",
+      throw TypeValidationError(
+        "The column type '${value.baseType}' is not supported by SQLite.",
       );
     }
 
@@ -208,8 +213,8 @@ Table pgTable(
         typeMatch != null ? typeMatch.group(1)!.trim() : value.baseType;
 
     if (!value.isEnum && !supportedPostgresTypes.contains(baseTypeName)) {
-      throw Exception(
-        "O tipo de coluna '$baseTypeName' não é suportado pelo PostgreSQL.",
+      throw TypeValidationError(
+        "The column type '$baseTypeName' is not supported by PostgreSQL.",
       );
     }
 

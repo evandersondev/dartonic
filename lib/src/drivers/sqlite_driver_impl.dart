@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dartonic/src/query_builder/query_builder.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import '../types/table.dart';
@@ -107,8 +108,7 @@ class SqliteDriverImpl extends DatabaseDriver {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> execute(String query,
-      [List? parameters]) async {
+  Future<QueryResult> execute(String query, [List? parameters]) async {
     try {
       final result = parameters == null
           ? _connection.select(query)

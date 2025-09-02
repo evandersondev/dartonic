@@ -1,5 +1,6 @@
 import 'package:postgres/postgres.dart';
 
+import '../query_builder/query_builder.dart';
 import '../types/types.dart';
 import 'driver.dart';
 
@@ -55,8 +56,7 @@ class PostgresDriverImpl extends DatabaseDriver {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> execute(String query,
-      [List<dynamic>? parameters]) async {
+  Future<QueryResult> execute(String query, [List<dynamic>? parameters]) async {
     Result result;
 
     if (parameters == null) {

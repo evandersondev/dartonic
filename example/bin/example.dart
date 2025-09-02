@@ -1,4 +1,5 @@
 import 'package:darto/darto.dart';
+import 'package:dartonic/dartonic.dart';
 import 'package:example/config/database.dart';
 
 void main() async {
@@ -6,13 +7,22 @@ void main() async {
 
   final db = await database.sync();
 
-  await db.insert(users.name).values({'name': 'Alice'});
-  await db.insert(users.name).values({'name': 'Bob'});
-  await db.insert(users.name).values({'name': 'Charlie'});
+  // await db.insert(users.name).values({'name': 'Alice'});
+  // await db.insert(users.name).values({'name': 'Bob'});
+  // await db.insert(users.name).values({'name': 'Charlie'});
 
-  // await db.insert(posts.name).values({'title': 'Post 1', 'user_id': 1});
-  // await db.insert(posts.name).values({'title': 'Post 2', 'user_id': 1});
-  // await db.insert(posts.name).values({'title': 'Post 3', 'user_id': 2});
+  // await db.insert(posts.name).values({
+  //   'title': 'Post 1',
+  //   'user_id': '6b679776-de78-489b-b021-a26c9821d8c1',
+  // });
+  // await db.insert(posts.name).values({
+  //   'title': 'Post 2',
+  //   'user_id': '6b679776-de78-489b-b021-a26c9821d8c1',
+  // });
+  // await db.insert(posts.name).values({
+  //   'title': 'Post 3',
+  //   'user_id': 'c89471e6-08f0-4fc5-a668-9771fb334b92',
+  // });
 
   // final userPosts = db
   //     .$with('user_posts')
@@ -39,11 +49,22 @@ void main() async {
   // await db.insert('users').values({'name': 'John Doe'});
   // await db.insert('users').values({'name': 'Jane Doe'});
   // await db.insert('users').values({'name': 'Neo Doe'});
-  // await db.insert('users').values({'name': 'Morpheus Doe'});
+  // final morpheus =
+  //     await db.insert('users').values({'name': 'Morpheus Doe'}).returning();
+  // print(morpheus);
   // await db.insert('users').values({'name': 'Cyfer Doe'});
-  // await db.update('users').set({'is_active': true});
+  // final userUpdated =
+  //     await db
+  //         .update('users')
+  //         .set({'name': 'Jane Doe'})
+  //         .where(eq('users.id', 'c89471e6-08f0-4fc5-a668-9771fb334b92'))
+  //         .returning();
+  // print(userUpdated);
 
-  final result = await db.select().from('users');
+  final result = await db
+      .select({'post_title': 'posts.title', 'user_name': 'users.name'})
+      .from('posts')
+      .innerJoin('users', eq('users.id', 'posts.user_id'));
   print(result);
 
   // await changeNamesWithRollback();

@@ -8,9 +8,12 @@ import '../types/table.dart';
 import '../utils/convertion_helper.dart';
 import 'condition.dart';
 
+typedef QueryResult = List<Map<String, dynamic>>;
+typedef Row = Map<String, dynamic>;
+
 // Alterações feitas para manter o nome original da tabela para lookup em _schemas.
 // Será criado um atributo _tableName para armazenar o nome original, e _table escapado será utilizado somente na geração da SQL.
-class QueryBuilder implements Future<dynamic> {
+class QueryBuilder implements Future<QueryResult> {
   final DatabaseDriver _driver;
   String _tableName = '';
   List<String> _columns = ['*'];
@@ -364,41 +367,48 @@ class QueryBuilder implements Future<dynamic> {
 
   List<dynamic> getParameters() => _parameters;
 
-  Future<dynamic> _internalExecute() async {
+  Future<QueryResult> _internalExecute() async {
     final sql = toSql();
     final params = getParameters();
-    dynamic result;
-    if (_queryType == 'SELECT' || _returningClause != null) {
-      result = await _driver.execute(sql, params);
-      if (_queryType == 'SELECT' &&
-          _columns.length == 1 &&
-          _columns[0].toLowerCase().startsWith("count(") &&
-          result is List &&
-          result.isNotEmpty &&
-          result[0] is Map) {
-        final row = result[0] as Map;
-        if (row.length == 1) {
-          result = row.values.first;
-        }
-      } else if (result is List) {
-        result = result.map((row) {
-          if (row is Map<String, dynamic>) {
-            row.forEach((key, value) {
-              final colType = _schemas[_tableName]?.columns[key];
-              if (colType != null) {
-                row[key] = convertValueForSelect(value, colType);
-              }
-            });
-          }
-          return row;
-        }).toList();
+
+    if (_queryType == 'SELECT') {
+      final result = await _driver.execute(sql, params);
+
+      if (_columns.length == 1 &&
+          _columns[0].toLowerCase().startsWith("count(")) {
+        // Handle COUNT specially
+        final count = (result as List).first as Map;
+        return [
+          {'count': count.values.first}
+        ];
       }
-    } else {
-      await _driver.raw(sql, params);
-      result = null;
+
+      return (result as List).map((row) {
+        if (row is Map<String, dynamic>) {
+          row.forEach((key, value) {
+            final colType = _schemas[_tableName]?.columns[key];
+            if (colType != null) {
+              row[key] = convertValueForSelect(value, colType);
+            }
+          });
+        }
+        return row as Map<String, dynamic>;
+      }).toList();
     }
-    _reset();
-    return result;
+
+    if (_queryType == 'INSERT' ||
+        _queryType == 'UPDATE' ||
+        _queryType == 'DELETE') {
+      if (_returningClause != null) {
+        final result = await _driver.execute(sql, params);
+        return result;
+      }
+      await _driver.raw(sql, params);
+      return [];
+    }
+
+    await _driver.raw(sql, params);
+    return [];
   }
 
   void _reset() {
@@ -422,28 +432,28 @@ class QueryBuilder implements Future<dynamic> {
   }
 
   @override
-  Future<S> then<S>(FutureOr<S> Function(dynamic value) onValue,
+  Future<S> then<S>(FutureOr<S> Function(QueryResult value) onValue,
       {Function? onError}) {
     return _internalExecute().then<S>(onValue, onError: onError);
   }
 
   @override
-  Future<dynamic> catchError(Function onError,
+  Future<QueryResult> catchError(Function onError,
       {bool Function(Object error)? test}) {
     return _internalExecute().catchError(onError, test: test);
   }
 
   @override
-  Future<dynamic> whenComplete(FutureOr<void> Function() action) {
+  Future<QueryResult> whenComplete(FutureOr<void> Function() action) {
     return _internalExecute().whenComplete(action);
   }
 
   @override
-  Stream<dynamic> asStream() => Stream.fromFuture(_internalExecute());
+  Stream<QueryResult> asStream() => Stream.fromFuture(_internalExecute());
 
   @override
-  Future<dynamic> timeout(Duration timeLimit,
-      {FutureOr<dynamic> Function()? onTimeout}) {
+  Future<QueryResult> timeout(Duration timeLimit,
+      {FutureOr<QueryResult> Function()? onTimeout}) {
     return _internalExecute().timeout(timeLimit, onTimeout: onTimeout);
   }
 }

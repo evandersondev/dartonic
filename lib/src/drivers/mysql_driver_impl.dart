@@ -1,3 +1,4 @@
+import 'package:dartonic/src/query_builder/query_builder.dart';
 import 'package:mysql1/mysql1.dart' as mysql;
 
 import '../types/table.dart';
@@ -39,8 +40,7 @@ class MysqlDriverImpl extends DatabaseDriver {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> execute(String query,
-      [List<dynamic>? parameters]) async {
+  Future<QueryResult> execute(String query, [List<dynamic>? parameters]) async {
     final result = parameters == null
         ? await _connection.query(query)
         : await _connection.query(query, parameters);

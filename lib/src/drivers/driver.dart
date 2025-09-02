@@ -1,3 +1,5 @@
+import 'package:dartonic/src/query_builder/query_builder.dart';
+
 import '../types/table.dart';
 import 'mysql_driver_impl.dart';
 import 'postgres_driver_impl.dart';
@@ -9,7 +11,7 @@ abstract class DatabaseDriver {
     String query, [
     List<dynamic>? parameters,
   ]);
-  Future<List<Map<String, dynamic>>> execute(
+  Future<QueryResult> execute(
     String query, [
     List<dynamic>? parameters,
   ]);

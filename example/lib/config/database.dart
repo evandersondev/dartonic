@@ -16,16 +16,16 @@ final users = pgTable('users', {
 });
 
 // Tabela de posts
-// final posts = pgTable('posts', {
-//   'id': serial().primaryKey(),
-//   'title': text(),
-//   'user_id': integer().references(() => 'users.id'),
-// });
+final posts = pgTable('posts', {
+  'id': uuid().primaryKey(autoGenerate: true),
+  'title': text(),
+  'user_id': uuid().references(() => 'users.id'),
+});
 
 // Criando a instância do Dartonic
 final database = Dartonic(
   "postgres://postgres:postgres@localhost:5432/postgres",
-  schemas: [users],
+  schemas: [users, posts],
 );
 
 Database db = database.instance;

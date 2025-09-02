@@ -1,3 +1,7 @@
+## 0.0.14
+
+- add auto generate uuuid by MySQL and Postgres, add custom errors: DatabaseError.
+
 ## 0.0.13
 
 - Change with clause from with\_ to with$.

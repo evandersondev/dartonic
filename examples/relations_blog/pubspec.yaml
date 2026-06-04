@@ -1,16 +1,14 @@
-name: book_api_crud
-description: A sample command-line application.
+name: relations_blog
+description: Example showing Dartonic table relations (FK, 1-1, 1-N, N-1, N-N) over a darto HTTP API with zard validation.
 version: 1.0.0
 publish_to: none
-# repository: https://github.com/my_org/my_repo
 
 environment:
   sdk: ^3.11.0
 
-# Add regular dependencies here.
 dependencies:
   darto: ^1.2.0
-  path: ^1.9.0
+  darto_inject: ^1.0.0
   zard: ^1.1.2
   dartonic_core:
     path: ../../dartonic_core
@@ -19,4 +17,3 @@ dependencies:
 
 dev_dependencies:
   lints: ^6.0.0
-  test: ^1.25.6

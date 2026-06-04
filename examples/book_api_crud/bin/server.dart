@@ -4,18 +4,17 @@ import 'package:darto/darto.dart';
 import 'package:darto/logger.dart';
 
 void main() async {
-  await initDatabase(); // opens the shared connection once
+  await initDatabase();
 
   final app = Darto();
   app.use(logger());
 
-  app.get("/", [], (Context c) async {
+  app.get("/", [], (c) async {
     final rows = await db.select().from(books);
-
     return c.json(rows.map((r) => r.raw).toList());
   });
 
-  app.post('/', [], (Context c) async {
+  app.post('/', [], (c) async {
     await db.insert(books).values([
       books.title.value('Harry Potter'),
       books.author.value('J.K. Rowling'),

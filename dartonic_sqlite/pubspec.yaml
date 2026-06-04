@@ -1,0 +1,17 @@
+name: dartonic_sqlite
+publish_to: none
+description: SQLite driver for Dartonic. Provides connectSqlite() to create a type-safe database connection.
+version: 1.0.0
+homepage: https://github.com/evandersondev/dartonic
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  dartonic_core:
+    path: ../dartonic_core
+  sqlite3: ^2.7.5
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.24.0

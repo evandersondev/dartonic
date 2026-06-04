@@ -1,0 +1,18 @@
+name: dartonic_cli
+publish_to: none
+description: Official CLI for Dartonic — init, migrate, and generate commands.
+version: 1.0.0
+homepage: https://github.com/evandersondev/dartonic
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  args: ^2.7.0
+  path: ^1.9.0
+
+dev_dependencies:
+  lints: ^5.0.0
+
+executables:
+  dartonic:

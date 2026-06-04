@@ -1,0 +1,13 @@
+name: twitter_clone
+description: A Twitter-like backend example built with Dartonic.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  dartonic_core:
+    path: ../../dartonic_core
+  dartonic_sqlite:
+    path: ../../dartonic_sqlite

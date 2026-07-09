@@ -14,7 +14,7 @@ export const translations = {
       installNote: "dart pub add dartonic_core",
       tagline: "One schema, three databases. Pure Dart. No codegen.",
       credibility: {
-        version: "v1.0.0",
+        version: "v1.0.1",
         oss: "Open source · MIT",
         pub: "pub.dev",
         github: "GitHub",
@@ -238,7 +238,7 @@ await db.transaction((tx) async {
       installNote: "dart pub add dartonic_core",
       tagline: "Um schema, três bancos. Dart puro. Sem codegen.",
       credibility: {
-        version: "v1.0.0",
+        version: "v1.0.1",
         oss: "Código aberto · MIT",
         pub: "pub.dev",
         github: "GitHub",

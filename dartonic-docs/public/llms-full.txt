@@ -35,6 +35,15 @@ Dartonic is a type-safe SQL query builder and ORM for Dart, inspired by Drizzle 
 | dartonic_cli (beta) | CLI — init, migrate, generate, studio. |
 | dartonic_studio (beta) | HTTP API to inspect tables and run read-only queries. |
 
+- [dartonic_core](https://pub.dev/packages/dartonic_core)
+- [dartonic_sqlite](https://pub.dev/packages/dartonic_sqlite)
+- [dartonic_postgres](https://pub.dev/packages/dartonic_postgres)
+- [dartonic_mysql](https://pub.dev/packages/dartonic_mysql)
+- [dartonic_zard](https://pub.dev/packages/dartonic_zard)
+- [dartonic_migrations_fs](https://pub.dev/packages/dartonic_migrations_fs)
+- [dartonic_cli](https://pub.dev/packages/dartonic_cli)
+- [dartonic_studio](https://pub.dev/packages/dartonic_studio)
+
 See: [Next: Installation](https://dartonic-docs.vercel.app/docs?section=installation)
 
 ## Installation
@@ -52,7 +61,7 @@ Or in pubspec.yaml:
 ```yaml
 # pubspec.yaml
 dependencies:
-  dartonic_core: ^1.0.0
+  dartonic_core: ^1.0.1
   dartonic_sqlite: ^1.0.0
 ```
 

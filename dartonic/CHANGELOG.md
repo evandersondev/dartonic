@@ -1,3 +1,10 @@
+## 0.0.15
+
+- Dartonic has moved to a modular set of packages. This all-in-one package is
+  kept for backwards compatibility and is no longer actively developed. New
+  projects should use `dartonic_core` plus a driver package
+  (`dartonic_sqlite` / `dartonic_postgres` / `dartonic_mysql`). See the README.
+
 ## 0.0.14
 
 - add auto generate uuuid by MySQL and Postgres, add custom errors: DatabaseError.

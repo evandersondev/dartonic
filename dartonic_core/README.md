@@ -11,6 +11,12 @@ typed query builder, conditions, relations, migrations and ORM helpers.
 Inspired by Drizzle ORM, but built around Dart 3 generics so the analyzer
 catches mistakes before you run anything.
 
+📚 **Official documentation:** [dartonic.vercel.app](https://dartonic.vercel.app/)
+
+### Support 💖
+
+If you find Dartonic useful, please consider supporting its development 🌟 [Buy Me a Coffee](https://buymeacoffee.com/evandersondev). 🌟 Your support helps us improve the package and make it even better!
+
 ```dart
 class UsersTable extends Table {
   final id        = integer('id').primaryKey(autoIncrement: true);

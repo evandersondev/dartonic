@@ -1,3 +1,9 @@
+## 1.0.1
+
+- Docs: add a Support section and link the official documentation
+  ([dartonic.vercel.app](https://dartonic.vercel.app/)) in the README; set the
+  `documentation` field in the pubspec. No code changes.
+
 ## 1.0.0
 
 First stable release of the modular Dartonic ecosystem. `dartonic_core` is the

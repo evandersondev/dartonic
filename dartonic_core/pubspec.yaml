@@ -2,6 +2,12 @@ name: dartonic_core
 description: Core query builder, schema DSL, and interfaces for Dartonic. No database driver dependencies.
 version: 1.0.0
 homepage: https://github.com/evandersondev/dartonic
+repository: https://github.com/evandersondev/dartonic
+topics:
+  - orm
+  - database
+  - sql
+  - query-builder
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

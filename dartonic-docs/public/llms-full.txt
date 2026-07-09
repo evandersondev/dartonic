@@ -1,0 +1,930 @@
+# Dartonic — Full Documentation
+
+> A type-safe SQL query builder and ORM for Dart. This file concatenates the entire Dartonic documentation for ingestion by language models.
+
+Source: https://dartonic-docs.vercel.app
+
+
+---
+
+# Getting Started
+
+## Overview
+<!-- https://dartonic-docs.vercel.app/docs?section=overview -->
+
+Dartonic is a type-safe SQL query builder and ORM for Dart, inspired by Drizzle ORM. You define your schema once as plain Dart classes and query SQLite, PostgreSQL and MySQL through one fluent, fully-typed API — with no code generation and no dynamic.
+
+### Design principles
+
+- No code generation — tables are plain Dart classes, no build_runner.
+- Type-safe — typed columns, typed conditions, typed rows.
+- Injection-safe — every value goes through parameterized queries.
+- Driver-agnostic core — one API over SQLite, PostgreSQL and MySQL.
+- Modular — depend only on the core plus the driver you need.
+
+### Packages
+
+| Package | Role |
+| --- | --- |
+| dartonic_core | Query builder, schema DSL, relations, migrations, ORM. No driver deps. |
+| dartonic_sqlite | SQLite driver — connectSqlite(). |
+| dartonic_postgres | PostgreSQL driver — connectPostgres(). |
+| dartonic_mysql | MySQL driver — connectMysql(). |
+| dartonic_migrations_fs (beta) | Load .sql migrations from the filesystem. |
+| dartonic_zard | Derive zard validation schemas from tables. |
+| dartonic_cli (beta) | CLI — init, migrate, generate, studio. |
+| dartonic_studio (beta) | HTTP API to inspect tables and run read-only queries. |
+
+See: [Next: Installation](https://dartonic-docs.vercel.app/docs?section=installation)
+
+## Installation
+<!-- https://dartonic-docs.vercel.app/docs?section=installation -->
+
+Add the core plus the driver for your database. The core has no driver dependencies, so you only ship what you use.
+
+```sh
+dart pub add dartonic_core
+dart pub add dartonic_sqlite   # or dartonic_postgres / dartonic_mysql
+```
+
+Or in pubspec.yaml:
+
+```yaml
+# pubspec.yaml
+dependencies:
+  dartonic_core: ^1.0.0
+  dartonic_sqlite: ^1.0.0
+```
+
+> **Tip:** SQLite is the quickest way to try Dartonic — it needs no server and supports an in-memory database with ':memory:'.
+
+## Quick Start
+<!-- https://dartonic-docs.vercel.app/docs?section=quick-start -->
+
+Define a table, connect, and run a query — the whole loop in one file.
+
+```dart
+// main.dart
+import 'package:dartonic_core/dartonic_core.dart';
+import 'package:dartonic_sqlite/dartonic_sqlite.dart';
+
+class UsersTable extends Table {
+  final id        = integer('id').primaryKey(autoIncrement: true);
+  final email     = text('email').notNull().unique();
+  final name      = text('name').notNull();
+  final createdAt = datetime('created_at').defaultNow();
+}
+final users = UsersTable();
+
+void main() async {
+  // `sync: true` (default) creates the tables on connect.
+  final db = await connectSqlite(':memory:', schemas: [users]);
+
+  await db.insert(users).values([
+    users.email.value('ada@example.com'),
+    users.name.value('Ada'),
+  ]);
+
+  final rows = await db.select().from(users).where(eq(users.name, 'Ada'));
+  print(rows.first.raw); // {id: 1, email: ada@example.com, name: Ada, ...}
+
+  await db.close();
+}
+```
+
+See: [Next: Tables & Columns](https://dartonic-docs.vercel.app/docs?section=tables-and-columns)
+
+## Choosing a database
+<!-- https://dartonic-docs.vercel.app/docs?section=choosing-a-database -->
+
+The same schema and query code runs on all three drivers. Pick by deployment target; swap the connect call to move between them.
+
+| Driver | Best for | Notes |
+| --- | --- | --- |
+| SQLite | Local/embedded, Flutter, tests | No server; ':memory:' or a file. RETURNING needs SQLite 3.35+. |
+| PostgreSQL | Production servers | Full RETURNING, JSONB, connection pooling. |
+| MySQL | Existing MySQL infra | ON DUPLICATE KEY upserts; no RETURNING. |
+
+> **Tip:** Develop against SQLite for speed, deploy on PostgreSQL — the query builder emits the right dialect per driver.
+
+
+---
+
+# Schema
+
+## Tables & Columns
+<!-- https://dartonic-docs.vercel.app/docs?section=tables-and-columns -->
+
+A table is a class that extends Table. Each field is a column created by a factory (integer, text, …). Dartonic collects the columns from the field initializers — no annotations, no code generation.
+
+```dart
+class UsersTable extends Table {
+  final id        = integer('id').primaryKey(autoIncrement: true);
+  final email     = text('email').notNull().unique();
+  final name      = text('name').notNull();
+  final createdAt = datetime('created_at').defaultNow();
+}
+
+final users = UsersTable();
+```
+
+Instantiate the table once and reuse that instance everywhere — its columns (users.id, users.email) are the typed references you pass to the query builder.
+
+> **Note:** The table name is derived from the class name: UsersTable → "users". See Table Naming to override it.
+
+## Column types
+<!-- https://dartonic-docs.vercel.app/docs?section=column-types -->
+
+Each factory returns a typed Column<T>. Not every type is valid on every dialect — Dartonic validates that at connect time.
+
+| Factory | Dart type | SQL |
+| --- | --- | --- |
+| integer(name) | int | INTEGER |
+| serial / bigserial / smallserial | int | SERIAL (PG/MySQL) |
+| text(name) | String | TEXT |
+| varchar(name, length: 255) / char | String | VARCHAR(n) / CHAR(n) |
+| boolean(name) | bool | INTEGER 0/1 |
+| real / decimal / numeric / doubleColumn | double | REAL / NUMERIC |
+| datetime(name) / date / timestamp / time | DateTime | DATETIME / DATE / TIMESTAMP |
+| uuid(name) | String | UUID |
+| json<T>(name, ...) / jsonMap(name) | T / Map | JSON / JSONB |
+| blob / binary / varbinary | Uint8List | BLOB family |
+| pgEnum(name, values)(col) | String | ENUM (Postgres) |
+
+DateTime columns choose a storage strategy via `storage:` — DateTimeStorage.string (ISO-8601, default), .epochMs, or .native.
+
+## Constraints & modifiers
+<!-- https://dartonic-docs.vercel.app/docs?section=constraints -->
+
+Modifiers are chainable and return the same Column<T>.
+
+```dart
+final id    = integer('id').primaryKey(autoIncrement: true);
+final uid   = uuid('uid').primaryKey(autoGenerate: true); // UUID v4 filled on insert
+final email = text('email').notNull().unique();
+final role  = text('role').withDefault('user');          // DEFAULT 'user'
+final at    = datetime('created_at').defaultNow();        // DEFAULT CURRENT_TIMESTAMP
+```
+
+- .notNull() — NOT NULL
+- .unique() — UNIQUE
+- .primaryKey(autoIncrement: true) — auto-increment integer PK
+- .primaryKey(autoGenerate: true) — UUID PK filled on insert
+- .withDefault(value) — DEFAULT <value>
+- .defaultNow() — DEFAULT CURRENT_TIMESTAMP
+- .references(() => other.id, onDelete: …) — foreign key
+
+## Foreign keys
+<!-- https://dartonic-docs.vercel.app/docs?section=foreign-keys -->
+
+Declare a single-column FK inline with .references(). The target is a thunk so tables can reference each other in any order.
+
+```dart
+class PostsTable extends Table {
+  final id     = integer('id').primaryKey(autoIncrement: true);
+  final userId = integer('user_id')
+      .notNull()
+      .references(() => users.id, onDelete: ReferentialAction.cascade);
+  final title  = text('title').notNull();
+}
+```
+
+For composite keys or to keep FKs together, override defineForeignKeys():
+
+```dart
+@override
+List<ForeignKey> defineForeignKeys() => [
+  ForeignKey.single(from: courseId, to: () => courses.id,
+    onDelete: ReferentialAction.cascade),
+];
+```
+
+ReferentialAction: cascade, restrict, noAction, setNull, setDefault.
+
+## Indexes
+<!-- https://dartonic-docs.vercel.app/docs?section=indexes -->
+
+Declare indexes by overriding defineIndexes(). They are materialized during sync() with CREATE INDEX IF NOT EXISTS.
+
+```dart
+@override
+List<Index> defineIndexes() => [
+  index('idx_users_created_at').on([createdAt]),
+  uniqueIndex('idx_users_email').on([email]),
+  // Partial index (SQLite/Postgres) — the predicate is inlined as a literal:
+  index('idx_active').on([email]).where(isNotNull(archivedAt)),
+];
+```
+
+## Table naming
+<!-- https://dartonic-docs.vercel.app/docs?section=table-naming -->
+
+By default the table name is derived from the class: the suffixes Table/Tbl/Schema are stripped and CamelCase becomes snake_case (BlogPostsTable → blog_posts). Override tableName for full control.
+
+```dart
+class Person extends Table {
+  @override
+  String get tableName => 'people';
+  final id = integer('id').primaryKey(autoIncrement: true);
+}
+```
+
+
+---
+
+# Connections
+
+## SQLite
+<!-- https://dartonic-docs.vercel.app/docs?section=connect-sqlite -->
+
+connectSqlite() opens an in-memory or file-based database. Foreign keys are enabled automatically (PRAGMA foreign_keys = ON).
+
+```dart
+import 'package:dartonic_sqlite/dartonic_sqlite.dart';
+
+final db = await connectSqlite(
+  ':memory:',           // or 'app.db'
+  schemas: [users, posts],
+  views: const [],
+  relations: const [],
+  sync: true,           // CREATE TABLE IF NOT EXISTS on connect
+);
+```
+
+> **Note:** RETURNING requires SQLite 3.35+. A `pool` argument is accepted for API symmetry but is a no-op for SQLite.
+
+## PostgreSQL
+<!-- https://dartonic-docs.vercel.app/docs?section=connect-postgres -->
+
+connectPostgres() takes a connection URI. `?` placeholders are converted to $1, $2, … automatically.
+
+```dart
+import 'package:dartonic_postgres/dartonic_postgres.dart';
+
+final db = await connectPostgres(
+  'postgres://user:pass@localhost:5432/mydb?sslmode=require',
+  schemas: [users, posts],
+  pool: const PoolConfig(max: 20, min: 2),
+);
+```
+
+URI: postgres://[user[:password]@][host[:port]][/database][?sslmode=require].
+
+## MySQL
+<!-- https://dartonic-docs.vercel.app/docs?section=connect-mysql -->
+
+connectMysql() takes a MySQL URI. ANSI_QUOTES is enabled on every connection so identifiers use double quotes consistently.
+
+```dart
+import 'package:dartonic_mysql/dartonic_mysql.dart';
+
+final db = await connectMysql(
+  'mysql://user:pass@localhost:3306/mydb',
+  schemas: [users, posts],
+  pool: const PoolConfig(max: 10),
+);
+```
+
+> **Note:** MySQL has no RETURNING; upserts translate to ON DUPLICATE KEY UPDATE.
+
+## Connection pooling
+<!-- https://dartonic-docs.vercel.app/docs?section=pooling -->
+
+For Postgres and MySQL, pass a PoolConfig so concurrent requests don't serialize on a single connection. A transaction pins one connection for its duration.
+
+```dart
+final db = await connectPostgres(
+  uri,
+  schemas: [users],
+  pool: const PoolConfig(
+    max: 20,                              // max concurrent connections
+    min: 2,                               // warm connections to keep
+    idleTimeout: Duration(minutes: 5),
+  ),
+);
+```
+
+> **Warning:** Without a pool, every query shares one connection — fine for scripts and Flutter, a bottleneck under server concurrency. SQLite ignores PoolConfig.
+
+## Closing connections
+<!-- https://dartonic-docs.vercel.app/docs?section=closing -->
+
+Call db.close() to release the socket (Postgres/MySQL) or file handle (SQLite). In a long-running server you usually keep one db for the process lifetime and close it on shutdown.
+
+```dart
+await db.close();
+```
+
+
+---
+
+# Queries
+
+## SELECT basics
+<!-- https://dartonic-docs.vercel.app/docs?section=select-basics -->
+
+The query builder implements Future<List<RowMap>> — just await it, no .execute() needed.
+
+```dart
+// SELECT *
+final all = await db.select().from(users);
+
+// Explicit columns
+final some = await db.select([users.id, users.email]).from(users);
+
+// Aliased projection (Drizzle-style map)
+final shaped = await db.select({
+  'id': users.id,
+  'total': sum(orders.total),
+}).from(orders);
+```
+
+## WHERE & conditions
+<!-- https://dartonic-docs.vercel.app/docs?section=where-conditions -->
+
+Conditions are typed helpers that produce parameterized SQL — the value never touches the SQL string.
+
+```dart
+await db.select().from(users).where(
+  and([
+    eq(users.active, true),
+    or([ gt(users.age, 18), isNull(users.age) ]),
+    inArray(users.role, ['admin', 'editor']),
+    like(users.email, '%@example.com'),
+  ]),
+);
+```
+
+| Helper | SQL |
+| --- | --- |
+| eq / ne / eqCol / neCol | =, <>, col=col |
+| gt / gte / lt / lte | > >= < <= |
+| isNull / isNotNull | IS [NOT] NULL |
+| inArray / notInArray | IN / NOT IN |
+| between / notBetween | BETWEEN … AND … |
+| like / ilike / notIlike | LIKE / ILIKE |
+| exists / notExists | EXISTS (subquery) |
+| and / or / not | boolean composition |
+
+## Joins
+<!-- https://dartonic-docs.vercel.app/docs?section=joins -->
+
+innerJoin / leftJoin / rightJoin / fullJoin take the joined table and an ON condition. Use eqCol to compare two columns. Joined columns are aliased table__column to avoid collisions.
+
+```dart
+await db.select().from(posts)
+  .innerJoin(users, eqCol(posts.userId, users.id))
+  .leftJoin(comments, eqCol(posts.id, comments.postId))
+  .where(eq(users.active, true));
+```
+
+## Aggregates & GROUP BY
+<!-- https://dartonic-docs.vercel.app/docs?section=aggregates -->
+
+Aggregate helpers return a SqlExpression you can select or filter in HAVING with the *Expr condition helpers.
+
+```dart
+await db.select({
+  'role': users.role,
+  'count': countAll(),
+})
+  .from(users)
+  .groupBy([users.role])
+  .having(gtExpr(countAll(), 5));
+```
+
+- countAll(), count(col, distinct: true)
+- sum(col), avg(col), max(col), min(col)
+- HAVING: eqExpr / gtExpr / gteExpr / ltExpr / lteExpr / neExpr
+
+## Order, limit & offset
+<!-- https://dartonic-docs.vercel.app/docs?section=order-limit-offset -->
+
+```dart
+await db.select().from(users)
+  .orderBy(users.createdAt, Order.desc)
+  .limit(20)
+  .offset(40);
+```
+
+Order is Order.asc | Order.desc. Combine limit + offset for pagination.
+
+## Subqueries & UNION
+<!-- https://dartonic-docs.vercel.app/docs?section=subqueries-union -->
+
+Use a subquery inside a condition (exists, inSubquery, …) or combine result sets with union.
+
+```dart
+// EXISTS subquery
+await db.select().from(users).where(
+  exists(db.select().from(orders).where(eqCol(orders.userId, users.id))),
+);
+
+// UNION
+await db.select().from(users).union(db.select().from(admins));
+```
+
+## Result mapping
+<!-- https://dartonic-docs.vercel.app/docs?section=result-mapping -->
+
+Rows come back as RowMap. Read cells with the typed .read()/.readNotNull(), grab the raw map with .raw, or decode straight into your model with .rows().
+
+```dart
+// Typed cell access
+final row = await db.select().from(users).where(eq(users.id, 1)).first();
+final id    = row?.read(users.id);           // int?
+final email = row?.readNotNull(users.email); // String (throws if null)
+
+// Decode into a model
+class User {
+  final int id; final String email;
+  User.fromRow(RowMap r)
+    : id = r.readNotNull(users.id),
+      email = r.readNotNull(users.email);
+}
+final list = await db.select().from(users).rows(User.fromRow); // List<User>
+```
+
+> **Note:** .first() adds LIMIT 1 and returns RowMap?. Only valid after select().
+
+
+---
+
+# Mutations
+
+## Insert
+<!-- https://dartonic-docs.vercel.app/docs?section=insert -->
+
+Build a typed insert with column.value(). Omit columns that have defaults or auto-increment.
+
+```dart
+await db.insert(users).values([
+  users.email.value('ada@example.com'),
+  users.name.value('Ada'),
+]);
+
+// Raw map-based insert (dynamic shapes / forms)
+await db.insert(users).valuesRaw({'email': 'x@y.com', 'name': 'X'});
+```
+
+## Batch insert
+<!-- https://dartonic-docs.vercel.app/docs?section=batch-insert -->
+
+valuesMany() inserts many rows in a single statement.
+
+```dart
+await db.insert(users).valuesMany([
+  [users.email.value('a@b.com'), users.name.value('Alice')],
+  [users.email.value('c@d.com'), users.name.value('Bob')],
+]);
+```
+
+## Returning
+<!-- https://dartonic-docs.vercel.app/docs?section=returning -->
+
+On PostgreSQL and SQLite, .returning() gives back the affected rows — great for reading generated ids.
+
+```dart
+final rows = await db.insert(users)
+  .values([users.email.value('a@b.com'), users.name.value('A')])
+  .returning([users.id, users.email]);
+final newId = rows.first.read(users.id);
+
+// Shortcut
+await db.insert(users).values([...]).returningId();
+```
+
+## Upsert (on conflict)
+<!-- https://dartonic-docs.vercel.app/docs?section=upsert -->
+
+```dart
+// Do nothing on conflict
+await db.insert(users)
+  .values([users.email.value('a@b.com'), users.name.value('A')])
+  .onConflictDoNothing(target: [users.email]);
+
+// Update on conflict
+await db.insert(users)
+  .values([users.email.value('a@b.com'), users.name.value('A2')])
+  .onConflictDoUpdate(target: [users.email], set: [users.name.value('A2')]);
+```
+
+> **Note:** SQLite/Postgres use ON CONFLICT; MySQL maps this to ON DUPLICATE KEY UPDATE.
+
+## Update & delete
+<!-- https://dartonic-docs.vercel.app/docs?section=update-delete -->
+
+```dart
+await db.update(users)
+  .set([users.name.value('Bob')])
+  .where(eq(users.id, 1));
+
+// Raw map variant
+await db.update(users).setRaw({'name': 'Bob'}).where(eq(users.id, 1));
+
+await db.delete(users).where(eq(users.id, 1));
+```
+
+> **Warning:** An update or delete without .where() affects every row. Always scope it unless you truly mean all rows.
+
+
+---
+
+# Transactions
+
+## Transactions
+<!-- https://dartonic-docs.vercel.app/docs?section=transactions -->
+
+db.transaction() runs a block against a pinned connection. Any thrown exception rolls back and rethrows; commit happens on success.
+
+```dart
+await db.transaction((tx) async {
+  await tx.update(accounts)
+    .set([accounts.balance.value(900)])
+    .where(eq(accounts.id, 1));
+  await tx.update(accounts)
+    .set([accounts.balance.value(1100)])
+    .where(eq(accounts.id, 2));
+  // throw to roll back everything, or tx.rollback() to roll back silently
+});
+```
+
+> **Tip:** Call tx.rollback() (which throws TransactionRollback) to abort without surfacing an error to the caller.
+
+
+---
+
+# Relations
+
+## Relations overview
+<!-- https://dartonic-docs.vercel.app/docs?section=relations-overview -->
+
+Referential integrity comes from foreign keys in the schema. To read related data, Dartonic offers batched loaders (no N+1) and a declarative with_ on the ORM helpers. Each loader runs 2–3 queries total regardless of row count.
+
+See: [Next: One-to-many](https://dartonic-docs.vercel.app/docs?section=one-to-many)
+
+## One-to-many
+<!-- https://dartonic-docs.vercel.app/docs?section=one-to-many -->
+
+findManyWith loads parents, then all their children in one batched IN query, and groups them in Dart.
+
+```dart
+final usersWithPosts = await db.findManyWith<User, Post, int>(
+  parent: users,
+  parentDecoder: User.fromRow,
+  parentKey: (u) => u.id,
+  childTable: posts,
+  childForeignKey: posts.userId,
+  childDecoder: Post.fromRow,
+);
+for (final e in usersWithPosts) {
+  print('${e.parent.name}: ${e.children.length} posts');
+}
+```
+
+## One-to-one
+<!-- https://dartonic-docs.vercel.app/docs?section=one-to-one -->
+
+```dart
+final usersWithProfile = await db.findManyWithOne<User, Profile, int>(
+  parent: users,
+  parentDecoder: User.fromRow,
+  parentKey: (u) => u.id,
+  childTable: profiles,
+  childForeignKey: profiles.userId,
+  childDecoder: Profile.fromRow,
+);
+// → List<WithOne<User, Profile?>>
+```
+
+## Many-to-many
+<!-- https://dartonic-docs.vercel.app/docs?section=many-to-many -->
+
+findManyThrough joins across a junction table in three queries.
+
+```dart
+final usersWithGroups = await db.findManyThrough<User, Group, int, int>(
+  parent: users,
+  parentDecoder: User.fromRow,
+  parentKey: (u) => u.id,
+  junction: userGroups,
+  junctionParentKey: userGroups.userId,
+  junctionChildKey: userGroups.groupId,
+  child: groups,
+  childKey: groups.id,
+  childDecoder: Group.fromRow,
+);
+// → List<WithChildren<User, Group>>
+```
+
+## ORM helpers
+<!-- https://dartonic-docs.vercel.app/docs?section=orm-helpers -->
+
+db.orm(table) wraps a table with higher-level CRUD helpers.
+
+```dart
+final repo = db.orm(users);
+final all      = await repo.findMany(where: eq(users.active, true), limit: 10);
+final first    = await repo.findFirst(where: eq(users.email, 'a@b.com'));
+final byId      = await repo.findById<int>(42, idColumn: users.id);
+final mapped   = await repo.mapMany<User>(User.fromRow, where: eq(users.active, true));
+```
+
+## Declarative loading
+<!-- https://dartonic-docs.vercel.app/docs?section=declarative-relations -->
+
+Register relations() metadata at connect time, then eager-load by name with findManyWithRelations. Returns plain maps with nested children.
+
+```dart
+final usersRel = relations(users, (r) => {
+  'posts': r.many('posts', fields: ['id'], references: ['user_id']),
+});
+final db = await connectSqlite(':memory:', schemas: [users, posts], relations: [usersRel]);
+
+final result = await db.orm(users).findManyWithRelations(with_: {'posts': true});
+// → [{ id, name, posts: [ {..}, {..} ] }, ...]
+```
+
+
+---
+
+# Advanced
+
+## CTEs (WITH)
+<!-- https://dartonic-docs.vercel.app/docs?section=ctes -->
+
+```dart
+final bigOrders = db.withCte('big_orders').as(
+  db.select().from(orders).where(gt(orders.total, 100.0)),
+);
+final rows = await db.fromCte(bigOrders); // SELECT * FROM "big_orders"
+```
+
+Parameters from the CTE body are carried through automatically.
+
+## Views
+<!-- https://dartonic-docs.vercel.app/docs?section=views -->
+
+Declare a view with the dialect-specific creator and register it at connect time.
+
+```dart
+final activeOrders = sqliteView('active_orders').as((qb) => qb
+  .select([orders.id, orders.total])
+  .from(orders)
+  .where(eq(orders.status, 'active')));
+
+final db = await connectSqlite(':memory:', schemas: [orders], views: [activeOrders]);
+```
+
+> **Note:** Creators: sqliteView(), pgView(), mysqlView(). View predicate values are inlined as SQL literals (engines reject bind params in CREATE VIEW).
+
+## Raw SQL
+<!-- https://dartonic-docs.vercel.app/docs?section=raw-sql -->
+
+The escape hatch: run any SQL with parameters. Returns undecoded maps.
+
+```dart
+final rows = await db.rawQuery(
+  'SELECT * FROM users WHERE email LIKE ?',
+  ['%@example.com'],
+);
+```
+
+## Prepared statements
+<!-- https://dartonic-docs.vercel.app/docs?section=prepared-statements -->
+
+Drivers keep a per-connection prepared-statement cache keyed by SQL text (bounded LRU), so repeated queries reuse the compiled statement automatically — no API to call. DDL is never cached.
+
+## Schema diffing
+<!-- https://dartonic-docs.vercel.app/docs?section=schema-diff -->
+
+db.diff() introspects the live database and compares it to your declared tables, returning the DDL needed to catch up. It is read-only — it never applies anything — and is the foundation for the CLI's migration generation.
+
+```dart
+final diff = await db.diff();
+for (final stmt in diff.statements) print(stmt); // CREATE TABLE… / ADD COLUMN…
+```
+
+> **Warning:** The current diff detects new tables and new columns. It does not detect drops, renames, type changes or constraint changes — review generated DDL before applying.
+
+
+---
+
+# Migrations
+
+## Manual migrations
+<!-- https://dartonic-docs.vercel.app/docs?section=migrations-manual -->
+
+A Migration is a name + SQL. db.migrate() records applied names in __dartonic_migrations, so each runs exactly once.
+
+```dart
+await db.migrate([
+  Migration(name: '001_init.sql', sql: '''
+    CREATE TABLE users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL UNIQUE
+    );
+  '''),
+  Migration(name: '002_add_posts.sql', sql: '...'),
+]);
+```
+
+## Filesystem migrations
+<!-- https://dartonic-docs.vercel.app/docs?section=migrations-filesystem -->
+
+> **Warning:** Beta: dartonic_migrations_fs is a beta package (1.0.0-beta). Its API may change before a stable release.
+
+On the server/CLI, keep .sql files in a folder and load them (sorted by filename) with dartonic_migrations_fs.
+
+```dart
+import 'package:dartonic_migrations_fs/dartonic_migrations_fs.dart';
+
+await db.migrate(loadMigrationsFromDir('db/migrations'));
+```
+
+```sh
+db/migrations/
+  001_init.sql
+  002_add_users.sql
+  003_add_posts.sql
+```
+
+## Flutter (assets)
+<!-- https://dartonic-docs.vercel.app/docs?section=migrations-flutter -->
+
+There's no filesystem on device, so load migration SQL from bundled assets instead.
+
+```dart
+import 'package:flutter/services.dart';
+
+await db.migrate([
+  Migration(name: '001_init.sql',
+    sql: await rootBundle.loadString('assets/migrations/001_init.sql')),
+]);
+```
+
+
+---
+
+# CLI & Studio
+
+## CLI
+<!-- https://dartonic-docs.vercel.app/docs?section=cli -->
+
+> **Warning:** Beta: dartonic_cli is a beta package (1.0.0-beta). Its commands and flags may change before a stable release.
+
+The dartonic CLI scaffolds and runs migrations.
+
+```sh
+dartonic init                       # create db/migrations and db/schema
+dartonic migrate --create add_users # scaffold a timestamped .sql file
+dartonic migrate --dry-run          # list pending migrations
+dartonic migrate --dir db/migrations
+dartonic generate                   # scaffold model helpers (guidance)
+dartonic studio                     # instructions to launch Studio
+```
+
+## Studio
+<!-- https://dartonic-docs.vercel.app/docs?section=studio -->
+
+> **Warning:** Beta: dartonic_studio is a beta package (1.0.0-beta). Its API and endpoints may change before a stable release.
+
+Studio is a small HTTP API to inspect your database. Bind it to localhost — it is not meant for production exposure.
+
+```dart
+import 'package:dartonic_studio/dartonic_studio.dart';
+
+await startStudio(db, port: 4444); // http://localhost:4444
+```
+
+| Endpoint | Purpose |
+| --- | --- |
+| GET /tables | List registered table names |
+| GET /tables/:name | Describe columns, types, modifiers |
+| POST /query | Run a read-only SELECT (only SELECT allowed) |
+
+
+---
+
+# Validation
+
+## dartonic_zard
+<!-- https://dartonic-docs.vercel.app/docs?section=dartonic-zard -->
+
+dartonic_zard derives zard validation schemas from a table (the drizzle-zod pattern) — the table is the single source of truth, so validation never drifts from the database.
+
+```dart
+import 'package:dartonic_zard/dartonic_zard.dart';
+
+final insertUser = createInsertSchema(users); // omits auto id; nullable/default → optional
+final selectUser = createSelectSchema(users); // every column
+final updateUser = createUpdateSchema(users); // all fields optional (partial)
+
+// Refine a derived field without restating presence rules:
+final signup = createInsertSchema(users, refine: {
+  'email': z.string().email(),
+  'name':  z.string().min(2).max(50),
+});
+```
+
+| Column | zard schema |
+| --- | --- |
+| integer() | z.int() |
+| text() | z.string() |
+| real() | z.double() |
+| boolean() | z.bool() |
+| datetime()/timestamp() | z.date() |
+| uuid() | z.string().uuid() |
+| json()/jsonMap() | z.map({}) (permissive) |
+| pgEnum(...) | z.$enum([...]) |
+
+> **Tip:** The derived schema is a normal zard schema — plug it into darto_validator's zValidator and darto_zard_openapi's .openapiSchema() for validation + OpenAPI from one table.
+
+
+---
+
+# Error Handling
+
+## Error handling
+<!-- https://dartonic-docs.vercel.app/docs?section=error-handling -->
+
+Drivers translate native database exceptions into a typed hierarchy under DatabaseError, so you can catch constraint violations precisely.
+
+```dart
+try {
+  await db.insert(users).values([users.email.value('taken@x.com')]);
+} on UniqueViolationError {
+  // 409 Conflict — duplicate unique/primary key
+} on ForeignKeyError {
+  // 409 — FK constraint
+} on NotNullViolationError {
+  // 400 — required column missing
+}
+```
+
+- DatabaseError — base (wraps the original driver error)
+- ConnectionError, ExecutionError, QueryBuildError, SchemaError, ValidationError, TypeValidationError
+- ConstraintViolationError → UniqueViolationError, NotNullViolationError, ForeignKeyError
+
+
+---
+
+# Examples
+
+## Example projects
+<!-- https://dartonic-docs.vercel.app/docs?section=examples -->
+
+Runnable projects live in the examples/ folder of the repo.
+
+- book_api_crud — REST CRUD over SQLite (insert/select/update/delete, .first()).
+- twitter_clone — joins, repository pattern, typed models via .rows().
+- flutter_todo — Flutter app on SQLite with asset-based migrations.
+- relations_blog — all four relation types + full HTTP API with darto + DI + validation.
+
+```sh
+cd examples/book_api_crud
+dart pub get
+dart run lib/main.dart
+```
+
+- [Browse examples on GitHub](https://github.com/evandersondev/dartonic/tree/main/examples)
+
+
+---
+
+# Package Reference
+
+## dartonic_core
+<!-- https://dartonic-docs.vercel.app/docs?section=reference-core -->
+
+The driver-agnostic heart: schema DSL, query builder, ORM helpers, relations, migrations and the typed error hierarchy.
+
+- Schema: Table, column factories, modifiers, ForeignKey, Index.
+- Query builder: select/insert/update/delete, conditions, joins, aggregates, CTEs, views.
+- Results: RowMap (read/readNotNull/raw), .rows(decoder), .first().
+- ORM: db.orm(table), findManyWith/WithOne/Through, findManyWithRelations.
+- Transactions: db.transaction. Migrations: Migration, db.migrate, db.diff.
+- Pooling: PoolConfig. Errors: DatabaseError + subclasses.
+
+- [pub.dev/packages/dartonic_core](https://pub.dev/packages/dartonic_core)
+
+## Drivers
+<!-- https://dartonic-docs.vercel.app/docs?section=reference-drivers -->
+
+| Package | Entry point | Notes |
+| --- | --- | --- |
+| dartonic_sqlite | connectSqlite(path, …) | ':memory:' or file; FK on; no-op pool. |
+| dartonic_postgres | connectPostgres(uri, …) | $n placeholders; RETURNING; pooling. |
+| dartonic_mysql | connectMysql(uri, …) | ANSI_QUOTES; ON DUPLICATE KEY; pooling. |
+
+All three share the same DartonicDb API; only the connect call and dialect differ.
+
+## CLI, Studio & migrations_fs
+<!-- https://dartonic-docs.vercel.app/docs?section=reference-tooling -->
+
+> **Warning:** dartonic_cli, dartonic_studio and dartonic_migrations_fs are currently beta (1.0.0-beta) — their APIs may change before a stable release.
+
+- dartonic_cli (beta) — dartonic init / migrate / generate / studio.
+- dartonic_studio (beta) — startStudio(db, port, host) + REST API (tables, query).
+- dartonic_migrations_fs (beta) — loadMigrationsFromDir(dir) for VM/CLI/server.
+- dartonic_zard — createInsertSchema / createSelectSchema / createUpdateSchema.

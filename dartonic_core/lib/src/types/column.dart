@@ -523,8 +523,8 @@ class PgEnumDefinition {
 class PgEnumColumn extends TextColumn {
   final PgEnumDefinition enumDefinition;
 
-  PgEnumColumn(String name, this.enumDefinition)
-      : super(name, type: enumDefinition.name);
+  PgEnumColumn(super.name, this.enumDefinition)
+      : super(type: enumDefinition.name);
 }
 
 PgEnumDefinition pgEnum(String name, List<String> values) =>

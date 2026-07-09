@@ -1,0 +1,8 @@
+# Local monorepo development only — NOT published to pub.dev.
+dependency_overrides:
+  dartonic_core:
+    path: ../dartonic_core
+  dartonic_sqlite:
+    path: ../dartonic_sqlite
+  zard:
+    path: ../../zard

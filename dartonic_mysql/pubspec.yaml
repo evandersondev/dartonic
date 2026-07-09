@@ -1,15 +1,18 @@
 name: dartonic_mysql
-publish_to: none
 description: MySQL driver for Dartonic. Provides connectMysql() to create a type-safe database connection.
 version: 1.0.0
 homepage: https://github.com/evandersondev/dartonic
+repository: https://github.com/evandersondev/dartonic
+topics:
+  - orm
+  - database
+  - mysql
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
-  dartonic_core:
-    path: ../dartonic_core
+  dartonic_core: ^1.0.0
   mysql1: ^0.20.0
 
 dev_dependencies:

@@ -1,0 +1,21 @@
+name: dartonic_zard
+description: Bridge between Dartonic and Zard — derive zard validation schemas from Dartonic tables (drizzle-zod style). One table definition, validation for free.
+version: 1.0.0
+homepage: https://github.com/evandersondev/dartonic
+repository: https://github.com/evandersondev/dartonic
+topics:
+  - orm
+  - validation
+  - database
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  dartonic_core: ^1.0.0
+  zard: ^1.4.0
+
+dev_dependencies:
+  dartonic_sqlite: ^1.0.0
+  lints: ^5.0.0
+  test: ^1.24.0

@@ -24,9 +24,24 @@ The main, publishable package is **[`dartonic_core`](./dartonic_core)** — star
 | [`dartonic_sqlite`](./dartonic_sqlite) | SQLite driver — `connectSqlite()`. |
 | [`dartonic_postgres`](./dartonic_postgres) | PostgreSQL driver — `connectPostgres()`. |
 | [`dartonic_mysql`](./dartonic_mysql) | MySQL driver — `connectMysql()`. |
-| [`dartonic_migrations_fs`](./dartonic_migrations_fs) | Filesystem migration loader (reads `.sql` files in CLI/server environments). |
-| [`dartonic_cli`](./dartonic_cli) | Official CLI — `init`, `migrate`, `generate`, `studio`. |
-| [`dartonic_studio`](./dartonic_studio) | Studio backend — HTTP API to inspect tables and run queries. |
+| [`dartonic_migrations_fs`](./dartonic_migrations_fs) 🧪 _beta_ | Filesystem migration loader (reads `.sql` files in CLI/server environments). |
+| [`dartonic_zard`](./dartonic_zard) | Bridge to [zard](https://github.com/evandersondev/zard) — derive validation schemas from tables (`createInsertSchema` / `createSelectSchema` / `createUpdateSchema`), drizzle-zod style. |
+| [`dartonic_cli`](./dartonic_cli) 🧪 _beta_ | Official CLI — `init`, `migrate`, `generate`, `studio`. |
+| [`dartonic_studio`](./dartonic_studio) 🧪 _beta_ | Studio backend — HTTP API to inspect tables and run queries. |
+| [`dartonic-docs`](./dartonic-docs) | Documentation site (Vite + React). `bun install && bun run dev`; `bun run build` also generates `llms.txt`. |
+
+### Connection pooling
+
+Network drivers accept a `PoolConfig` — `connectPostgres(uri, schemas: [...], pool: PoolConfig(max: 20))`
+(same for `connectMysql`). SQLite accepts it as a no-op for API symmetry.
+
+### Publishing status
+
+`dartonic_core` is publishable. The driver packages and `dartonic_zard` depend
+on `dartonic_core` (and `zard`) via **path** dependencies, so they can only be
+published to pub.dev after `dartonic_core` (and `zard`) are published there —
+swap the path deps for version deps at that point. Run `dart pub publish --dry-run`
+per package before publishing.
 
 ## Examples
 

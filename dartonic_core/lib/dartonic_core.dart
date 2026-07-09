@@ -2,7 +2,9 @@ library;
 
 export 'src/dartonic.dart';
 export 'src/drivers/driver.dart';
+export 'src/drivers/pool_config.dart';
 export 'src/migrations/migrations.dart';
+export 'src/migrations/schema_diff.dart';
 export 'src/orm/orm.dart';
 export 'src/query_builder/builder.dart';
 export 'src/types/column.dart';

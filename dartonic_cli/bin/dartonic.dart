@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 
-import '../lib/src/commands/generate_command.dart';
-import '../lib/src/commands/init_command.dart';
-import '../lib/src/commands/migrate_command.dart';
-import '../lib/src/commands/studio_command.dart';
+import 'package:dartonic_cli/src/commands/generate_command.dart';
+import 'package:dartonic_cli/src/commands/init_command.dart';
+import 'package:dartonic_cli/src/commands/migrate_command.dart';
+import 'package:dartonic_cli/src/commands/studio_command.dart';
 
 void main(List<String> args) async {
   final runner = CommandRunner<void>(

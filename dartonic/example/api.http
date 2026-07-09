@@ -1,0 +1,23 @@
+
+
+### - Create a new task
+POST http://localhost:3000/api/v1/users
+Content-Type: application/json
+
+{
+  "fullname": "John Doe",
+  "birthday": 20
+}
+
+### -  Get all tasks
+GET http://localhost:3000/api/v1/users
+
+
+### -Update a task
+PUT http://localhost:3000/api/v1/users/03c46c44-d01f-476b-8915-e37dad69e6f0
+Content-Type: application/json
+
+{
+  "title": "Updated Task",
+  "description": "This is an updated task"
+}

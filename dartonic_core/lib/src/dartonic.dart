@@ -1,5 +1,6 @@
 import 'drivers/driver.dart';
 import 'migrations/migration_runner.dart';
+import 'migrations/schema_diff.dart';
 import 'orm/orm_table.dart';
 import 'query_builder/condition.dart';
 import 'query_builder/database_facade.dart';
@@ -24,6 +25,7 @@ class DartonicDb implements Database {
   final List<Table> _schemas;
   final List<ViewSchema> _views;
   final List<RelationsTable> _relations;
+  final Dialect _dialect;
   late final DatabaseFacade _facade;
 
   DartonicDb({
@@ -35,7 +37,8 @@ class DartonicDb implements Database {
   })  : _driver = driver,
         _schemas = schemas,
         _views = views,
-        _relations = relations {
+        _relations = relations,
+        _dialect = dialect {
     _facade = DatabaseFacade(_driver, dialect: dialect);
   }
 
@@ -69,7 +72,27 @@ class DartonicDb implements Database {
   // ── Schema / ORM helpers ─────────────────────────────────────────────────
 
   /// Returns the [OrmTable] helper for high-level find operations on [table].
-  OrmTable<T> orm<T extends Table>(T table) => OrmTable<T>(table, _facade);
+  /// The helper is wired with this db's declared relations so
+  /// `findManyWithRelations(with_: {...})` can resolve them.
+  OrmTable<T> orm<T extends Table>(T table) => OrmTable<T>(
+        table,
+        _facade,
+        relations: {
+          for (final r in _relations) r.tableName: r.relations,
+        },
+        tableResolver: _resolveTable,
+      );
+
+  /// Resolves a table by name across registered schemas and relation tables.
+  Table? _resolveTable(String name) {
+    for (final t in _schemas) {
+      if (t.tableName == name) return t;
+    }
+    for (final r in _relations) {
+      if (r.tableName == name) return r;
+    }
+    return null;
+  }
 
   /// All registered tables.
   List<Table> get schemas => List.unmodifiable(_schemas);
@@ -152,6 +175,19 @@ class DartonicDb implements Database {
   /// Applies pending [migrations] in order. See [MigrationRunner].
   Future<void> migrate(List<Migration> migrations) =>
       MigrationRunner(_driver, migrations: migrations).migrate();
+
+  /// Diffs the declared schemas (and relation tables) against the live
+  /// database schema and returns the DDL needed to reconcile them.
+  ///
+  /// This is the foundation for auto-migrations: it currently emits
+  /// `CREATE TABLE` for missing tables and `ALTER TABLE ... ADD COLUMN` for
+  /// missing columns. It does NOT detect drops, renames, type changes or
+  /// constraint diffs — see [diffSchema] for the full scope. Intended to be
+  /// driven by the CLI's `generate` command to scaffold a migration file.
+  ///
+  /// This is read-only: it introspects but never applies anything.
+  Future<SchemaDiff> diff() =>
+      diffSchema(_driver, [..._schemas, ..._relations], dialect: _dialect);
 
   /// Closes the underlying database connection and releases its resources.
   /// Call this when you're done with the database (e.g. on app shutdown) to

@@ -1,0 +1,103 @@
+# Dartonic
+
+> A type-safe SQL query builder and ORM for Dart, inspired by Drizzle. Define your schema once as plain Dart classes and query SQLite, PostgreSQL and MySQL with a fluent, fully-typed builder. No code generation. No dynamic.
+
+Dartonic is a monorepo: dartonic_core (driver-agnostic query builder, schema DSL, relations, migrations and ORM), one package per driver (dartonic_sqlite, dartonic_postgres, dartonic_mysql), filesystem migrations (dartonic_migrations_fs), a validation bridge to zard (dartonic_zard), a CLI (dartonic_cli) and a DB inspector (dartonic_studio). The docs below cover the schema DSL, connections, the query builder, mutations, transactions, relations, advanced features, migrations, tooling, validation, error handling, examples and a per-package reference.
+
+## Getting Started
+
+- [Overview](https://dartonic-docs.vercel.app/docs?section=overview): Dartonic is a type-safe SQL query builder and ORM for Dart, inspired by Drizzle ORM.
+- [Installation](https://dartonic-docs.vercel.app/docs?section=installation): Add the core plus the driver for your database.
+- [Quick Start](https://dartonic-docs.vercel.app/docs?section=quick-start): Define a table, connect, and run a query — the whole loop in one file.
+- [Choosing a database](https://dartonic-docs.vercel.app/docs?section=choosing-a-database): The same schema and query code runs on all three drivers.
+
+## Schema
+
+- [Tables & Columns](https://dartonic-docs.vercel.app/docs?section=tables-and-columns): A table is a class that extends Table.
+- [Column types](https://dartonic-docs.vercel.app/docs?section=column-types): Each factory returns a typed Column<T>.
+- [Constraints & modifiers](https://dartonic-docs.vercel.app/docs?section=constraints): Modifiers are chainable and return the same Column<T>.
+- [Foreign keys](https://dartonic-docs.vercel.app/docs?section=foreign-keys): Declare a single-column FK inline with .references().
+- [Indexes](https://dartonic-docs.vercel.app/docs?section=indexes): Declare indexes by overriding defineIndexes().
+- [Table naming](https://dartonic-docs.vercel.app/docs?section=table-naming): By default the table name is derived from the class: the suffixes Table/Tbl/Schema are stripped and CamelCase becomes snake_case (BlogPostsTable → blog_posts).
+
+## Connections
+
+- [SQLite](https://dartonic-docs.vercel.app/docs?section=connect-sqlite): connectSqlite() opens an in-memory or file-based database.
+- [PostgreSQL](https://dartonic-docs.vercel.app/docs?section=connect-postgres): connectPostgres() takes a connection URI.
+- [MySQL](https://dartonic-docs.vercel.app/docs?section=connect-mysql): connectMysql() takes a MySQL URI.
+- [Connection pooling](https://dartonic-docs.vercel.app/docs?section=pooling): For Postgres and MySQL, pass a PoolConfig so concurrent requests don't serialize on a single connection.
+- [Closing connections](https://dartonic-docs.vercel.app/docs?section=closing): Call db.close() to release the socket (Postgres/MySQL) or file handle (SQLite).
+
+## Queries
+
+- [SELECT basics](https://dartonic-docs.vercel.app/docs?section=select-basics): The query builder implements Future<List<RowMap>> — just await it, no .execute() needed.
+- [WHERE & conditions](https://dartonic-docs.vercel.app/docs?section=where-conditions): Conditions are typed helpers that produce parameterized SQL — the value never touches the SQL string.
+- [Joins](https://dartonic-docs.vercel.app/docs?section=joins): innerJoin / leftJoin / rightJoin / fullJoin take the joined table and an ON condition.
+- [Aggregates & GROUP BY](https://dartonic-docs.vercel.app/docs?section=aggregates): Aggregate helpers return a SqlExpression you can select or filter in HAVING with the *Expr condition helpers.
+- [Order, limit & offset](https://dartonic-docs.vercel.app/docs?section=order-limit-offset): Order is Order.asc | Order.desc.
+- [Subqueries & UNION](https://dartonic-docs.vercel.app/docs?section=subqueries-union): Use a subquery inside a condition (exists, inSubquery, …) or combine result sets with union.
+- [Result mapping](https://dartonic-docs.vercel.app/docs?section=result-mapping): Rows come back as RowMap.
+
+## Mutations
+
+- [Insert](https://dartonic-docs.vercel.app/docs?section=insert): Build a typed insert with column.value().
+- [Batch insert](https://dartonic-docs.vercel.app/docs?section=batch-insert): valuesMany() inserts many rows in a single statement.
+- [Returning](https://dartonic-docs.vercel.app/docs?section=returning): On PostgreSQL and SQLite, .returning() gives back the affected rows — great for reading generated ids.
+- [Upsert (on conflict)](https://dartonic-docs.vercel.app/docs?section=upsert)
+- [Update & delete](https://dartonic-docs.vercel.app/docs?section=update-delete)
+
+## Transactions
+
+- [Transactions](https://dartonic-docs.vercel.app/docs?section=transactions): db.transaction() runs a block against a pinned connection.
+
+## Relations
+
+- [Relations overview](https://dartonic-docs.vercel.app/docs?section=relations-overview): Referential integrity comes from foreign keys in the schema.
+- [One-to-many](https://dartonic-docs.vercel.app/docs?section=one-to-many): findManyWith loads parents, then all their children in one batched IN query, and groups them in Dart.
+- [One-to-one](https://dartonic-docs.vercel.app/docs?section=one-to-one)
+- [Many-to-many](https://dartonic-docs.vercel.app/docs?section=many-to-many): findManyThrough joins across a junction table in three queries.
+- [ORM helpers](https://dartonic-docs.vercel.app/docs?section=orm-helpers): db.orm(table) wraps a table with higher-level CRUD helpers.
+- [Declarative loading](https://dartonic-docs.vercel.app/docs?section=declarative-relations): Register relations() metadata at connect time, then eager-load by name with findManyWithRelations.
+
+## Advanced
+
+- [CTEs (WITH)](https://dartonic-docs.vercel.app/docs?section=ctes): Parameters from the CTE body are carried through automatically.
+- [Views](https://dartonic-docs.vercel.app/docs?section=views): Declare a view with the dialect-specific creator and register it at connect time.
+- [Raw SQL](https://dartonic-docs.vercel.app/docs?section=raw-sql): The escape hatch: run any SQL with parameters.
+- [Prepared statements](https://dartonic-docs.vercel.app/docs?section=prepared-statements): Drivers keep a per-connection prepared-statement cache keyed by SQL text (bounded LRU), so repeated queries reuse the compiled statement automatically — no A…
+- [Schema diffing](https://dartonic-docs.vercel.app/docs?section=schema-diff): db.diff() introspects the live database and compares it to your declared tables, returning the DDL needed to catch up.
+
+## Migrations
+
+- [Manual migrations](https://dartonic-docs.vercel.app/docs?section=migrations-manual): A Migration is a name + SQL.
+- [Filesystem migrations](https://dartonic-docs.vercel.app/docs?section=migrations-filesystem): On the server/CLI, keep .sql files in a folder and load them (sorted by filename) with dartonic_migrations_fs.
+- [Flutter (assets)](https://dartonic-docs.vercel.app/docs?section=migrations-flutter): There's no filesystem on device, so load migration SQL from bundled assets instead.
+
+## CLI & Studio
+
+- [CLI](https://dartonic-docs.vercel.app/docs?section=cli): The dartonic CLI scaffolds and runs migrations.
+- [Studio](https://dartonic-docs.vercel.app/docs?section=studio): Studio is a small HTTP API to inspect your database.
+
+## Validation
+
+- [dartonic_zard](https://dartonic-docs.vercel.app/docs?section=dartonic-zard): dartonic_zard derives zard validation schemas from a table (the drizzle-zod pattern) — the table is the single source of truth, so validation never drifts fr…
+
+## Error Handling
+
+- [Error handling](https://dartonic-docs.vercel.app/docs?section=error-handling): Drivers translate native database exceptions into a typed hierarchy under DatabaseError, so you can catch constraint violations precisely.
+
+## Examples
+
+- [Example projects](https://dartonic-docs.vercel.app/docs?section=examples): Runnable projects live in the examples/ folder of the repo.
+
+## Package Reference
+
+- [dartonic_core](https://dartonic-docs.vercel.app/docs?section=reference-core): The driver-agnostic heart: schema DSL, query builder, ORM helpers, relations, migrations and the typed error hierarchy.
+- [Drivers](https://dartonic-docs.vercel.app/docs?section=reference-drivers): All three share the same DartonicDb API; only the connect call and dialect differ.
+- [CLI, Studio & migrations_fs](https://dartonic-docs.vercel.app/docs?section=reference-tooling)
+
+## Optional
+
+- [Full documentation](https://dartonic-docs.vercel.app/llms-full.txt): the entire Dartonic documentation concatenated into a single file.
+- [GitHub repository](https://github.com/evandersondev/dartonic): source code and issues.
+- [pub.dev package](https://pub.dev/packages/dartonic_core): published package.

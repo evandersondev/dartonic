@@ -1,15 +1,18 @@
 name: dartonic_studio
-publish_to: none
 description: Studio backend for Dartonic — HTTP API to inspect tables and run queries.
-version: 1.0.0
+version: 1.0.0-beta.1
 homepage: https://github.com/evandersondev/dartonic
+repository: https://github.com/evandersondev/dartonic
+topics:
+  - orm
+  - database
+  - devtools
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
-  dartonic_core:
-    path: ../dartonic_core
+  dartonic_core: ^1.0.0
   shelf: ^1.4.0
   shelf_router: ^1.1.0
 

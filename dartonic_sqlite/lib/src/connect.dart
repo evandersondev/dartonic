@@ -15,12 +15,18 @@ import 'sqlite_driver.dart';
 ///   schemas: [Users(), Posts()],
 /// );
 /// ```
+///
+/// [pool] is accepted for API symmetry with [connectPostgres] /
+/// [connectMysql] but is a **no-op** for SQLite: the driver is a single
+/// embedded file/in-memory handle with no socket to pool. It exists so
+/// callers can swap dialects without changing call sites.
 Future<DartonicDb> connectSqlite(
   String path, {
   required List<Table> schemas,
   List<ViewSchema> views = const [],
   List<RelationsTable> relations = const [],
   bool sync = true,
+  PoolConfig? pool,
 }) async {
   validateTablesForDialect([...schemas, ...relations], Dialect.sqlite);
   final driver = SqliteDriver(path);
